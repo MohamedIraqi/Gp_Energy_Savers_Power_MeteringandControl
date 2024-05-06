@@ -4,14 +4,13 @@ Created By Mohamed Iraqi
 This file implements Core functions for hardware side of the code
 */
 
-
 //Define Comm Phrases
 #define Message_Ended "DataReceived"
 #define Terminator_Char "$"
 
 #include <ZMPT101B.h>
 
-#include "ReadSensors.h"
+//#include "ReadSensors.h"
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
@@ -186,9 +185,10 @@ bool ReadSensors_SendPowerReadToEsp(float* power, int size = 3) {
      * @return The requested String
      *
      **/
-String ReadSensors_SendRequest(String Request) {
+String ReadSensors_SendRequest(CommEnum_t Request) {
   String ReceivedDataStringBUFFER = "";
-  Serial.print(Request + "$");
+  Serial.print(Request );
+  Serial.print("$");
   Serial.flush();
   if (Serial.available() == 0) {
     for (int i = 0; (i < 100 && (Serial.available() == 0)); i++) {

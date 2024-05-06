@@ -105,6 +105,8 @@ void ArdCom_Init() {
   // Serial.println(uid);
 }
 
+enum CommEnum{hour_Enum=92,minute_Enum,second_Enum,day_Enum,weekday_Enum,month_Enum,year_Enum,Message_Ended_Enum};
+
 /**
      * Manages communication with the arduino
      *
@@ -119,61 +121,79 @@ void ArdCom_Com_Handler() {
     if (Serial.available() > 0) {
       ReceivedDataStringBUFFER = Serial.readStringUntil('$');
       /*Time Conversation sending time as per request*/
-      
-      if (ReceivedDataStringBUFFER == "hour") {
-        Serial.print(hour());
-        Serial.flush();
-        Serial.print(Terminator_Char);
-        Serial.flush();
+      switch (ReceivedDataStringBUFFER.toInt()) {
 
-      } else if (ReceivedDataStringBUFFER == "minute") {
-        Serial.print(minute());
-        Serial.flush();
-        Serial.print(Terminator_Char);
-        Serial.flush();
-
-      } else if (ReceivedDataStringBUFFER == "second") {
-        Serial.print(second());
-        Serial.flush();
-        Serial.print(Terminator_Char);
-        Serial.flush();
-
-      } else if (ReceivedDataStringBUFFER == "day") {
-        Serial.print(day());
-        Serial.flush();
-        Serial.print(Terminator_Char);
-        Serial.flush();
-
-      } else if (ReceivedDataStringBUFFER == "weekday") {
-        Serial.print(weekday());
-        Serial.flush();
-        Serial.print(Terminator_Char);
-        Serial.flush();
-
-      } else if (ReceivedDataStringBUFFER == "month") {
-        Serial.print(month());
-        Serial.flush();
-        Serial.print(Terminator_Char);
-        Serial.flush();
-
-      } else if (ReceivedDataStringBUFFER == "year") {
-        Serial.print(year());
-        Serial.flush();
-        Serial.print(Terminator_Char);
-        Serial.flush();
-
-      } else if (ReceivedDataStringBUFFER == Message_Ended) {
-        if (Serial.available() == 0) {
-          for (int i = 0; (i < 50 && (Serial.available() == 0)); i++) {
-            delay(5);
+        case hour_Enum:
+          {
+            Serial.print(hour());
+            Serial.flush();
+            Serial.print(Terminator_Char);
+            Serial.flush();
+            break;
           }
-        };
-        ReceivedDataStringBUFFER = Serial.readStringUntil('$');
-        if (ReceivedDataStringBUFFER == Message_Ended) {
-          DataReceived = true;
-          Serial.print(ReceivedDataStringBUFFER);
-          Serial.flush();
-        }
+        case minute_Enum:
+          {
+            Serial.print(minute());
+            Serial.flush();
+            Serial.print(Terminator_Char);
+            Serial.flush();
+            break;
+          }
+        case second_Enum:
+          {
+            Serial.print(second());
+            Serial.flush();
+            Serial.print(Terminator_Char);
+            Serial.flush();
+            break;
+          }
+        case day_Enum:
+          {
+            Serial.print(day());
+            Serial.flush();
+            Serial.print(Terminator_Char);
+            Serial.flush();
+            break;
+          }
+        case weekday_Enum:
+          {
+            Serial.print(weekday());
+            Serial.flush();
+            Serial.print(Terminator_Char);
+            Serial.flush();
+            break;
+          }
+        case month_Enum:
+          {
+            Serial.print(month());
+            Serial.flush();
+            Serial.print(Terminator_Char);
+            Serial.flush();
+            break;
+          }
+        case year_Enum:
+          {
+            Serial.print(year());
+            Serial.flush();
+            Serial.print(Terminator_Char);
+            Serial.flush();
+            break;
+          }
+        case Message_Ended_Enum:
+          {
+            if (Serial.available() == 0) {
+              for (int i = 0; (i < 50 && (Serial.available() == 0)); i++) {
+                delay(5);
+              }
+            };
+            ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+            if (ReceivedDataStringBUFFER == Message_Ended) {
+              DataReceived = true;
+              Serial.print(ReceivedDataStringBUFFER);
+              Serial.flush();
+            }
+            break;
+          }
       }
     }
   }

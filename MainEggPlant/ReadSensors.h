@@ -4,6 +4,17 @@ Created By Mohamed Iraqi
 This file defines Core functions for hardware side of the code
 */
 
+typedef enum {
+  hour_Enum=92,
+  minute_Enum,
+  second_Enum,
+  day_Enum,
+  weekday_Enum,
+  month_Enum,
+  year_Enum,
+  Message_Ended_Enum
+} CommEnum_t;
+
 /**
      * Init for the lcd and required inputs for measurment
      *
@@ -54,7 +65,7 @@ bool ReadSensors_SendPowerReadToEsp(float* power, int size = 3);
      * @return The requested String
      *
      **/
-String ReadSensors_SendRequest(String Request);
+String ReadSensors_SendRequest(CommEnum_t Request);
 
 /**
      * Send Request to Esp

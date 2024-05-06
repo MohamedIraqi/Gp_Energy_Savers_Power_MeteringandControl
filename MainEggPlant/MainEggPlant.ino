@@ -25,7 +25,7 @@ void loop() {
     power[i] = CtArray[i] * PtArray[0];
   }
   ReadSensors_SendPowerReadToEsp(power);
-  ReadSensors_LcdDisplay(ReadSensors_SendRequest("hour") + ":" + ReadSensors_SendRequest("minute") + ":" + ReadSensors_SendRequest("second"));
+  ReadSensors_LcdDisplay(ReadSensors_SendRequest(hour_Enum) + ":" + ReadSensors_SendRequest(minute_Enum) + ":" + ReadSensors_SendRequest(second_Enum));
   // Enter power down state for 8 s with ADC and BOD module disabled
   LowPower.powerDown(SLEEP_2S, ADC_ON, BOD_ON);
 }
