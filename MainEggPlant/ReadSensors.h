@@ -13,10 +13,10 @@ typedef enum {
   month_Enum,
   year_Enum,
   now_Enum,
-  powerDevice1,
-  powerDevice2,
-  powerDevice3,
-  
+  Power_Enum,
+  EnergyNow_Enum,
+  EnergyHourly_Enum,
+  TotalEnergySincePowerUp_Enum,
   Message_Ended_Enum
 } CommEnum_t;
 
@@ -58,11 +58,12 @@ void ReadSensors_LCDDisplayMeasurements(float* CtArray, float* PtArray, int CtAr
 /**
      * Send Power Reading to Esp
      *
+     * @param PowerIdentifier The power array Type
      * @param power The power array Readings
      * @return True if transaction completed, false if transaction failed
      *
      **/
-bool ReadSensors_SendPowerReadToEsp(float* power, int size = 3);
+bool ReadSensors_SendPowerReadToEsp(CommEnum_t PowerIdentifier, double* power ,double Energyhourlypowertobe[][3]=0);
 /**
      * Send Request to Esp
      *
@@ -93,7 +94,7 @@ void ReadSensors_LcdDisplay(String toDisp, bool clear = true, int cursorx = 0, i
      **/
 void ReadSensors_GetInitHour();
 
-/**
+/**(NOT USED)
      * checks if Esp is Online(connected to wifi)
      *
      * @param null

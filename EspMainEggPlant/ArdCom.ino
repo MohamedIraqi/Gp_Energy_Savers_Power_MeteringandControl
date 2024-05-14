@@ -114,9 +114,10 @@ enum CommEnum {
   month_Enum,
   year_Enum,
   now_Enum,
-  powerDevice1,
-  powerDevice2,
-  powerDevice3,
+  Power_Enum,
+  EnergyNow_Enum,
+  EnergyHourly_Enum,
+  TotalEnergySincePowerUp_Enum,
   Message_Ended_Enum
 };
 
@@ -128,6 +129,8 @@ enum CommEnum {
      *
      */
 void ArdCom_Com_Handler() {
+  int Hour_TimeNow_VarF = hour();
+  double EnergyHourly_Holder[24][PowerArraySize] = { 0 };
   String ReceivedDataStringBUFFER = "";
   bool DataReceived = false;
   for (int i = 0; (i < 500 || !DataReceived); i++) {
@@ -200,40 +203,64 @@ void ArdCom_Com_Handler() {
             Serial.flush();
             break;
           }
-        case powerDevice1:
+        case Power_Enum:
           {
-            if (Serial.available() == 0) {
-              for (int i = 0; (i < 50 && (Serial.available() == 0)); i++) {
-                delay(5);
+            for (int i = 0; i < PowerArraySize; i++) {
+
+              if (Serial.available() == 0) {
+                for (int i = 0; (i < 50 && (Serial.available() == 0)); i++) {
+                  delay(5);
+                }
               }
+              ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+              power[i] = ReceivedDataStringBUFFER.toDouble();
             }
-            ReceivedDataStringBUFFER = Serial.readStringUntil('$');
-            power[0] = ReceivedDataStringBUFFER.toFloat();
             break;
           }
-        case powerDevice2:
+
+        case EnergyNow_Enum:
           {
-            if (Serial.available() == 0) {
-              for (int i = 0; (i < 50 && (Serial.available() == 0)); i++) {
-                delay(5);
+            for (int i = 0; i < PowerArraySize; i++) {
+
+              if (Serial.available() == 0) {
+                for (int i = 0; (i < 50 && (Serial.available() == 0)); i++) {
+                  delay(5);
+                }
               }
+              ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+              EnergyNow[i] = ReceivedDataStringBUFFER.toDouble();
             }
-            ReceivedDataStringBUFFER = Serial.readStringUntil('$');
-            power[1] = ReceivedDataStringBUFFER.toFloat();
             break;
           }
-        case powerDevice3:
+        case TotalEnergySincePowerUp_Enum:
           {
-            if (Serial.available() == 0) {
-              for (int i = 0; (i < 50 && (Serial.available() == 0)); i++) {
-                delay(5);
+            for (int i = 0; i < PowerArraySize; i++) {
+
+              if (Serial.available() == 0) {
+                for (int i = 0; (i < 50 && (Serial.available() == 0)); i++) {
+                  delay(5);
+                }
               }
+              ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+              TotalEnergySincePowerUp[i] = ReceivedDataStringBUFFER.toDouble();
+            }
+            break;
+          }
+        case EnergyHourly_Enum:
+          {
+            for (int g = 0; g < PowerArraySize; g++) {
+              if (Serial.available() == 0) {
+                for (int i = 0; (i < 50 && (Serial.available() == 0)); i++) {
+                  delay(5);
+                }
+              }
+              ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+              EnergyHourly[Hour_TimeNow_VarF][g] = ReceivedDataStringBUFFER.toDouble();
             }
 
-            ReceivedDataStringBUFFER = Serial.readStringUntil('$');
-            power[2] = ReceivedDataStringBUFFER.toFloat();
             break;
           }
+
         case Message_Ended_Enum:
           {
             if (Serial.available() == 0) {
@@ -244,7 +271,6 @@ void ArdCom_Com_Handler() {
             ReceivedDataStringBUFFER = Serial.readStringUntil('$');
             if (ReceivedDataStringBUFFER == Message_Ended) {
               DataReceived = true;
-              Serial.print(ReceivedDataStringBUFFER);
               Serial.flush();
             }
             break;
@@ -270,8 +296,16 @@ bool ArdCom_StatusConnectedWifi() {
   return status;
 }
 
-
-
+/**
+     * Gets current hour
+     *
+     * @param . void.
+     * @return returns current hour
+     *
+     */
+int ArdCom_MyHour() {
+  return hour();
+}
 
 /*-------- NTP code ----------*/
 

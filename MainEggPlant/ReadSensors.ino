@@ -8,6 +8,7 @@ This file implements Core functions for hardware side of the code
 #define Message_Ended "DataReceived"
 #define Terminator_Char "$"
 
+
 #include <ZMPT101B.h>
 
 //#include "ReadSensors.h"
@@ -143,38 +144,53 @@ void ReadSensors_LCDDisplayMeasurements(float* CtArray, float* PtArray, int CtAr
      * @return True if transaction completed, false if transaction failed
      *
      **/
-bool ReadSensors_SendPowerReadToEsp(float* power, int size = 3) {
+bool ReadSensors_SendPowerReadToEsp(CommEnum_t PowerIdentifier, double* power, double Energyhourlypowertobe[][3] = 0) {
+  int Hour_TimeNow_VarF = ReadSensors_SendRequest(hour_Enum).toInt();
   bool Transaction = false;
-  String ReceivedDataStringBUFFER;
-  String SendingString;
-
-  if (Serial.available() < 0) {
-    for (int i = 0; (i < 50 && (Serial.available() < 0)); i++) {
-      delay(5);
-    }
-  } else if (Serial.available() > 0) {
-    ReceivedDataStringBUFFER = Serial.readStringUntil('$');
-    if (ReceivedDataStringBUFFER == "SendData") {
-      for (int i = 0; i < size; i++) {
-        Serial.print("Power");
-        Serial.print(String(i));
+  switch (PowerIdentifier) {
+    case Power_Enum:
+    case EnergyNow_Enum:
+    case TotalEnergySincePowerUp_Enum:
+      {
+        Serial.print(PowerIdentifier);
+        Serial.print("$");
+        for (int i = 0; i < PowerArraySize; i++) {
+          delay(5);
+          Serial.print(String(power[i]));
+          Serial.print("$");
+          Serial.flush();
+        }
+        Serial.flush();
+        Serial.print(Message_Ended_Enum);
+        Serial.print("$");
+        Serial.print(Message_Ended);
         Serial.print("$");
         Serial.flush();
-        SendingString = String(power[i]);
-        Serial.print(SendingString + '$');
-        Serial.flush();
-        delay(5);
+        break;
       }
-      Serial.print("DataReceived$");
-      Serial.flush();
-      Serial.print("DataReceived$");
-      Serial.flush();
-      delay(5);
-
-      Transaction = true;
-    }
+    case EnergyHourly_Enum:
+      {
+        Serial.print(PowerIdentifier);
+        Serial.print("$");
+        Serial.flush();
+        //for (int ii = 0; ii < 24; ii++) {
+          for (int i = 0; i < PowerArraySize; i++) {
+            delay(5);
+            Serial.print(String(Energyhourlypowertobe[Hour_TimeNow_VarF][i]));
+            Serial.print("$");
+            Serial.flush();
+          }
+       // }
+        Serial.print(Message_Ended_Enum);
+        Serial.print("$");
+        Serial.flush();
+        Serial.print(Message_Ended);
+        Serial.print("$");
+        Serial.flush();
+      }
+    default:
+      break;
   }
-
   return Transaction;
 }
 
@@ -189,6 +205,10 @@ String ReadSensors_SendRequest(CommEnum_t Request) {
   String ReceivedDataStringBUFFER = "";
   Serial.print(Request);
   Serial.print("$");
+  Serial.flush();
+  Serial.print(Message_Ended_Enum);
+  Serial.print("$");
+  Serial.flush();
   Serial.print(Message_Ended);
   Serial.print("$");
   Serial.flush();
@@ -234,7 +254,7 @@ void ReadSensors_GetInitHour() {
   }
 }
 
-/**
+/**(NOT USED)
      * checks if Esp is Online(connected to wifi)
      *
      * @param null
@@ -254,6 +274,20 @@ bool ReadSensors_EspOnlineStatus() {
   return status;
 }
 
+// double EEMEM TotalEnergySincePowerUp_EEMEM[PowerArraySize] = { 0 };
+// double EEMEM EnergyHourly_EEMEM[24][3] = { 0 };
+// void ReadSensors_SaveEEPROM() {
+//   eeprom_update_block(TotalEnergySincePowerUp, &TotalEnergySincePowerUp_EEMEM, 3 * sizeof(double));
+//   for (int i = 0; (i < 500 || !eeprom_is_ready()); i++) {
+//     delay(10);
+//   }
+//   eeprom_update_block(EnergyHourly, &EnergyHourly_EEMEM, 24 * 3 * sizeof(double));
+// }
+
+// void ReadSensors_RestoreFromEEprom() {
+//   eeprom_read_block(TotalEnergySincePowerUp, &TotalEnergySincePowerUp_EEMEM, 3 * sizeof(double));
+//   eeprom_read_block(EnergyHourly, &EnergyHourly_EEMEM, 24 * 3 * sizeof(double));
+// }
 float getVPP(int sensorTA12) {
   float result;
   int readValue;     //value read from the sensor
