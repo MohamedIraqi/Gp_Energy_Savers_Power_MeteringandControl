@@ -187,7 +187,9 @@ bool ReadSensors_SendPowerReadToEsp(float* power, int size = 3) {
      **/
 String ReadSensors_SendRequest(CommEnum_t Request) {
   String ReceivedDataStringBUFFER = "";
-  Serial.print(Request );
+  Serial.print(Request);
+  Serial.print("$");
+  Serial.print(Message_Ended);
   Serial.print("$");
   Serial.flush();
   if (Serial.available() == 0) {
@@ -206,10 +208,50 @@ String ReadSensors_SendRequest(CommEnum_t Request) {
      * @return null
      *
      **/
-void ReadSensors_LcdDisplay(String toDisp) {
-  lcd.setCursor(0, 0);
-  lcd.clear();
+void ReadSensors_LcdDisplay(String toDisp, bool clear = true, int cursorx = 0, int cursory = 0) {
+  if (clear) {
+    lcd.clear();
+  }
+  lcd.setCursor(cursorx, cursory);
   lcd.print(toDisp);
+}
+
+/**
+     * Get Initial Hour correctly
+     *
+     * @param null
+     * @return null
+     *
+     **/
+void ReadSensors_GetInitHour() {
+  //Get HourNow make sure it's correct
+  for (int i = 0; (i < 300); i++) {
+    HourNow_Time = ReadSensors_SendRequest(hour_Enum).toInt();
+    delay(500);
+    if ((HourNow_Time == ReadSensors_SendRequest(hour_Enum).toInt() && HourNow_Time >= 0 && HourNow_Time < 24)) {
+      break;
+    }
+  }
+}
+
+/**
+     * checks if Esp is Online(connected to wifi)
+     *
+     * @param null
+     * @return ture if online or false if offline
+     *
+     **/
+bool ReadSensors_EspOnlineStatus() {
+  bool status = true;
+  if (Serial.available() == 0) {
+    for (int i = 0; (i < 50 && (Serial.available() == 0)); i++) {
+      delay(5);
+    }
+  };
+  if ((String)Serial.read() == ".") {
+    status = false;
+  }
+  return status;
 }
 
 float getVPP(int sensorTA12) {

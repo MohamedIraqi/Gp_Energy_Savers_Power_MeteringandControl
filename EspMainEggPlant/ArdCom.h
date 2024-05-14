@@ -21,3 +21,12 @@ void ArdCom_Init();
      *
      */
 void ArdCom_Com_Handler();
+
+/**
+     * Checks wifi connection and sends "." in serial if offline
+     *
+     * @param . void.
+     * @return ture if online or false if offline
+     *
+     */
+bool ArdCom_StatusConnectedWifi();

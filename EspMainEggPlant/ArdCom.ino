@@ -105,7 +105,20 @@ void ArdCom_Init() {
   // Serial.println(uid);
 }
 
-enum CommEnum{hour_Enum=92,minute_Enum,second_Enum,day_Enum,weekday_Enum,month_Enum,year_Enum,Message_Ended_Enum};
+enum CommEnum {
+  hour_Enum = 92,
+  minute_Enum,
+  second_Enum,
+  day_Enum,
+  weekday_Enum,
+  month_Enum,
+  year_Enum,
+  now_Enum,
+  powerDevice1,
+  powerDevice2,
+  powerDevice3,
+  Message_Ended_Enum
+};
 
 /**
      * Manages communication with the arduino
@@ -179,6 +192,48 @@ void ArdCom_Com_Handler() {
             Serial.flush();
             break;
           }
+        case now_Enum:
+          {
+            Serial.print(now());
+            Serial.flush();
+            Serial.print(Terminator_Char);
+            Serial.flush();
+            break;
+          }
+        case powerDevice1:
+          {
+            if (Serial.available() == 0) {
+              for (int i = 0; (i < 50 && (Serial.available() == 0)); i++) {
+                delay(5);
+              }
+            }
+            ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+            power[0] = ReceivedDataStringBUFFER.toFloat();
+            break;
+          }
+        case powerDevice2:
+          {
+            if (Serial.available() == 0) {
+              for (int i = 0; (i < 50 && (Serial.available() == 0)); i++) {
+                delay(5);
+              }
+            }
+            ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+            power[1] = ReceivedDataStringBUFFER.toFloat();
+            break;
+          }
+        case powerDevice3:
+          {
+            if (Serial.available() == 0) {
+              for (int i = 0; (i < 50 && (Serial.available() == 0)); i++) {
+                delay(5);
+              }
+            }
+
+            ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+            power[2] = ReceivedDataStringBUFFER.toFloat();
+            break;
+          }
         case Message_Ended_Enum:
           {
             if (Serial.available() == 0) {
@@ -199,7 +254,21 @@ void ArdCom_Com_Handler() {
   }
 }
 
-
+/**
+     * Checks wifi connection and sends "." in serial if offline
+     *
+     * @param . void.
+     * @return ture if online or false if offline
+     *
+     */
+bool ArdCom_StatusConnectedWifi() {
+  bool status = true;
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(300);
+  }
+  return status;
+}
 
 
 

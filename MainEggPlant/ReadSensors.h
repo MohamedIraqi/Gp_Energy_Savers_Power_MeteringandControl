@@ -5,13 +5,18 @@ This file defines Core functions for hardware side of the code
 */
 
 typedef enum {
-  hour_Enum=92,
+  hour_Enum = 92,
   minute_Enum,
   second_Enum,
   day_Enum,
   weekday_Enum,
   month_Enum,
   year_Enum,
+  now_Enum,
+  powerDevice1,
+  powerDevice2,
+  powerDevice3,
+  
   Message_Ended_Enum
 } CommEnum_t;
 
@@ -71,7 +76,28 @@ String ReadSensors_SendRequest(CommEnum_t Request);
      * Send Request to Esp
      *
      * @param ToDisp The String to be displayed
+     * @param clear Ture to clear display false to leave it as it was
+     * @param cursorx cursor x position
+     * @param cursory cursor y position
      * @return null
      *
      **/
-void ReadSensors_LcdDisplay(String toDisp);
+void ReadSensors_LcdDisplay(String toDisp, bool clear = true, int cursorx = 0, int cursory = 0);
+
+/**
+     * Get Initial Hour correctly
+     *
+     * @param null
+     * @return null
+     *
+     **/
+void ReadSensors_GetInitHour();
+
+/**
+     * checks if Esp is Online(connected to wifi)
+     *
+     * @param null
+     * @return ture if online or false if offline
+     *
+     **/
+bool ReadSensors_EspOnlineStatus();
