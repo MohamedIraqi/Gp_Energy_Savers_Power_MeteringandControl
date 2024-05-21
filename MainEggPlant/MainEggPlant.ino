@@ -35,12 +35,15 @@ void setup() {
 }
 
 void loop() {
-  BeforeMeasure_Time = millis();
+  
+  //Power Calculations
   ReadSensors_Measure(CtArray, PtArray, 10);
+  BeforeMeasure_Time = millis();
   ReadSensors_LCDDisplayMeasurements(CtArray, PtArray);
   for (int i = 0; i < PowerArraySize; i++) {
     power[i] = CtArray[i] * PtArray[0];
   }
+
 
   /*Send Power*/
   if ((millis() - Hold_Min_SendPower_VarBefre) >= SendPowerDelayms) {
@@ -105,8 +108,8 @@ ReadSensors_LcdDisplay(ReadSensors_SendRequest(hour_Enum) + ":" + ReadSensors_Se
   }
 */
 
-  /*Logging Data on eeprom once every 24Hours or a reset*/
-  /*if (((ReadSensors_SendRequest(minute_Enum).toInt() - eeprom_read_word(HourHolderNameVarHereLogging)) >= 3) && !DidLogToday) {
+/*Logging Data on eeprom once every 24Hours or a reset*/
+/*if (((ReadSensors_SendRequest(minute_Enum).toInt() - eeprom_read_word(HourHolderNameVarHereLogging)) >= 3) && !DidLogToday) {
     ReadSensors_SaveEEPROM();
     DidLogToday = true;
     eeprom_update_word(&HourHolderNameVarHereLogging, ReadSensors_SendRequest(day_Enum).toInt());
