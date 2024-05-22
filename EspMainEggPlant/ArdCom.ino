@@ -133,7 +133,7 @@ void ArdCom_Com_Handler() {
   double EnergyHourly_Holder[24][PowerArraySize] = { 0 };
   String ReceivedDataStringBUFFER = "";
   bool DataReceived = false;
-  for (int i = 0; (i < 500 || !DataReceived); i++) {
+  for (int i = 0; (i < 5000 &&|| !DataReceived); i++) {
     if (Serial.available() > 0) {
       ReceivedDataStringBUFFER = Serial.readStringUntil('$');
       /*Time Conversation sending time as per request*/

@@ -16,7 +16,7 @@ This file defines Core functions for Communication with The arduino Code side of
 LiquidCrystal_I2C lcd(lcdAddress, lcdColumns, lcdRows, LCD_5x10DOTS);
 
 
-#define PowerArraySize 3
+#define PowerArraySize 3 //Number of devices
 
 /*Usage Variables*/
 double TotalEnergySincePowerUp[PowerArraySize] = { 0 };

@@ -47,11 +47,11 @@ void loop() {
 
   /*Send Power*/
   if ((millis() - Hold_Min_SendPower_VarBefre) >= SendPowerDelayms) {
+    Hold_Min_SendPower_VarBefre = millis();//update hold variable
     ReadSensors_SendPowerReadToEsp(Power_Enum, power);
     ReadSensors_SendPowerReadToEsp(EnergyNow_Enum, EnergyNow);
     ReadSensors_SendPowerReadToEsp(TotalEnergySincePowerUp_Enum, TotalEnergySincePowerUp);
     ReadSensors_SendPowerReadToEsp(EnergyHourly_Enum, power, EnergyHourly);
-    Hold_Min_SendPower_VarBefre = millis();
     delay(2000);
   }
   ReadSensors_LcdDisplay(ReadSensors_SendRequest(hour_Enum) + ":" + ReadSensors_SendRequest(minute_Enum) + ":" + ReadSensors_SendRequest(second_Enum));
