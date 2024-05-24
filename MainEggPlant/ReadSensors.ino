@@ -30,10 +30,10 @@ LiquidCrystal_I2C lcd(lcdAddress, lcdColumns, lcdRows, LCD_5x10DOTS);
 
 
 // Define analog input pins
-const int CTPin1 = A0;
-const int CTPin2 = A1;
-const int CTPin3 = A2;
-const int PTPin1 = A3;
+const int PTPin1 = A0;
+const int CTPin1 = A1;
+const int CTPin2 = A2;
+const int CTPin3 = A3;
 
 int CTPins[] = { CTPin1, CTPin2, CTPin3 };
 int PTPins[] = { PTPin1 };
