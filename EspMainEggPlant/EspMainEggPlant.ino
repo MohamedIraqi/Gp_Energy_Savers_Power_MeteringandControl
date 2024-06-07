@@ -6,71 +6,44 @@ This file defines Core functions for Communication with The arduino Code side of
 
 #include "ArdCom.h"
 
-#include <LiquidCrystal_I2C.h>
-//I2C pins declaration
-// Initialize the LiquidCrystal_I2C library with the LCD address and dimensions
-#define lcdColumns 16
-#define lcdRows 2
-#define lcdAddress 0x27  // You may need to adjust this address based on your LCD module
-// Set the LCD address and dimensions
-LiquidCrystal_I2C lcd(lcdAddress, lcdColumns, lcdRows, LCD_5x10DOTS);
-
-
-#define PowerArraySize 3 //Number of devices
+#define PowerArraySize 3           //Number of devices
+#define EnergyHourlyArraySize 24   //Number of hours
+#define EnergyMonthlyArraySize 31  //Number of Days in a month
 
 /*Usage Variables*/
-double TotalEnergySincePowerUp[PowerArraySize] = { 0 };
-double EnergyHourly[24][PowerArraySize] = { 0 };
-double EnergyNow[PowerArraySize] = { 0 };
+float TotalEnergySincePowerUp[PowerArraySize] = { 0 };
+float EnergyHourly[EnergyHourlyArraySize][PowerArraySize] = { 0 };
+float EnergyNow[PowerArraySize] = { 0 };
+float EnergyMonthly[EnergyMonthlyArraySize][PowerArraySize] = { 0 };
 
 double power[3] = { 0 };
 
-void setup() {
-  lcd.begin();      //Defining 16 columns and 2 rows of lcd display
-  lcd.backlight();  //To Power ON the back light
+int MonthNow_Time;
+int DayNow_Time;
+int HourNow_Time;
 
-  // put your setup code here, to run once:
+void setup() {
+
   ArdCom_Init();
 }
 
 int Hold_Millis_SendPower_Var = 0;
 void loop() {
+  //ArdCom_lcd_DataDisp();
 
+  //test
+  // Populate arrays with random numbers
+  for (size_t i = 0; i < PowerArraySize; ++i) {
+    TotalEnergySincePowerUp[i] = static_cast<double>(std::rand()) / RAND_MAX * 1002;  // Random number between 0 and 1000
+    EnergyNow[i] = static_cast<double>(std::rand()) / RAND_MAX * 1002;                // Random number between 0 and 1000
+    power[i] = static_cast<double>(std::rand()) / RAND_MAX * 1002;
+    for (size_t j = 0; j < 31; ++j) {
+      EnergyHourly[j][i] = static_cast<double>(std::rand()) / RAND_MAX * 1000;  // Random number between 0 and 1000
+    }
 
-
-    ArdCom_Com_Handler();
-  ArdCom_StatusConnectedWifi();
-}
-/*testing energyhourly
-  lcd.print(":1:" + String(EnergyHourly[ArdCom_MyHour()][0]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("2:" + String(EnergyHourly[ArdCom_MyHour()][1]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("3:" + String(EnergyHourly[ArdCom_MyHour()][2]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("4:" + String(TotalEnergySincePowerUp[0]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("5:" + String(TotalEnergySincePowerUp[1]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("6:" + String(TotalEnergySincePowerUp[2]));
-  delay(1000);
-  
-  for (int ii = 0; ii < 24; ii++) {
-  lcd.clear();
-  delay(100);
-  lcd.clear();
-    lcd.clear();
-  lcd.print(String(ii)+":1.2:" +String(EnergyHourly[ii][1]));
-  delay(100);
-  lcd.clear();
-    lcd.clear();
-  lcd.print(String(ii)+":1.3:" +String(EnergyHourly[ii][2]));
-  delay(100);
-  lcd.clear();
   }
-  */
+
+  ArdCom_UploadData();
+  //ArdCom_Com_Handler();
+  //ArdCom_StatusConnectedWifi();
+}

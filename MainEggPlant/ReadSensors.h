@@ -17,6 +17,7 @@ typedef enum {
   EnergyNow_Enum,
   EnergyHourly_Enum,
   TotalEnergySincePowerUp_Enum,
+  IsConnected_Enum,
   Message_Ended_Enum
 } CommEnum_t;
 
@@ -93,6 +94,51 @@ void ReadSensors_LcdDisplay(String toDisp, bool clear = true, int cursorx = 0, i
      *
      **/
 void ReadSensors_GetInitHour();
+
+/**
+     * Get Initial Day correctly
+     *
+     * @param null
+     * @return null
+     *
+     **/
+void ReadSensors_GetInitDay();
+
+/**
+     * CalculatePower
+     *
+     * @param null
+     * @return null
+     *
+     **/
+void Main_CalculatePower();
+
+/**
+     * Send Power arrays to Esp
+     *
+     * @param null
+     * @return null
+     *
+     **/
+void Main_SendPower();
+
+/**
+     * Calculate Energy arrays 
+     *
+     * @param null
+     * @return null
+     *
+     **/
+void Main_CalculateEnergyArrays();
+
+/**
+     * Resets daily arrays after each new day
+     *
+     * @param null
+     * @return null
+     *
+     **/
+void Main_ResetArrays();
 
 /**(NOT USED)
      * checks if Esp is Online(connected to wifi)

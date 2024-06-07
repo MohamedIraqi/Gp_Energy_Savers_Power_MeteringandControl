@@ -7,9 +7,16 @@ This file implements Core functions for Communication with The arduino Code side
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
-//#include <Firebase_ESP_Client.h>
-//#include <addons/TokenHelper.h>
+#include <Firebase_ESP_Client.h>
+#include <addons/TokenHelper.h>
 #include <TimeLib.h>
+#include <LiquidCrystal_I2C.h>
+
+//I2C pins declaration
+// Initialize the LiquidCrystal_I2C library with the LCD address and dimensions
+#define lcdColumns 16
+#define lcdRows 2
+#define lcdAddress 0x27  // You may need to adjust this address based on your LCD module
 
 // Insert your network credentials
 #define WIFI_SSID "HAMBOZZA"
@@ -19,27 +26,35 @@ This file implements Core functions for Communication with The arduino Code side
 #define USER_EMAIL "a@a.com"
 #define USER_PASSWORD "123456"
 
+#define FIREBASE_API_KEY "AIzaSyDZlWYdjADT9hdkr-ZJpPW5Ildce_0Y-FU"
+
 //Define Comm Phrases
 #define Message_Ended "DataReceived"
 #define Terminator_Char "$"
+
 // NTP Servers:
 static const char ntpServerName[] = "pool.ntp.org";
-const int timeZone = 3;  // Central European Time
+const int timeZone = 3;  // Central European Time(+2 and +1 for summer time)
 void sendNTPpacket(IPAddress &address);
 time_t getNtpTime();
+void m_GetInitMonth();
+void m_GetInitDay();
+void m_GetInitHour();
 
 WiFiUDP Udp;
 unsigned int localPort = 8888;  // local port to listen for UDP packets
 
+// Set the LCD address and dimensions
+LiquidCrystal_I2C lcd(lcdAddress, lcdColumns, lcdRows, LCD_5x10DOTS);
 
 // Define Firebase objects
-// FirebaseData fbdo;
-// FirebaseAuth auth;
-// FirebaseConfig config;
-String projectId = "test1-123fe";
-String databaseId = "(default)";
-String collectionId = "users/";
-String documentPath = "users/Wu0gxdSjnldkDVX6kas0Z5H8dby1";
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+
+String ProjectId = "grad-prototype1";
+String DatabaseId = "(default)";
+String collectionId = "Devices/";
 bool taskCompleted = false;
 String uid;
 
@@ -51,8 +66,8 @@ String uid;
      *
      */
 void ArdCom_Init() {
-  //Connecting to wifi
   Serial.begin(115200);
+  //Connecting to wifi
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to Wi-Fi");
   while (WiFi.status() != WL_CONNECTED) {
@@ -70,39 +85,44 @@ void ArdCom_Init() {
   Serial.println("waiting for sync");
   setSyncProvider(getNtpTime);
   setSyncInterval(300);
-  // /* Assign the callback function for the long running token generation task */
-  // config.token_status_callback = tokenStatusCallback;  // see addons/TokenHelper.h
 
-  // /* Assign the api key (required) */
-  // config.api_key = FIREBASE_API_KEY;
+  /* Assign the callback function for the long running token generation task */
+  config.token_status_callback = tokenStatusCallback;  // see addons/TokenHelper.h
 
-  // /* Assign the user sign in credentials */
-  // auth.user.email = USER_EMAIL;
-  // auth.user.password = USER_PASSWORD;
+  /* Assign the api key (required) */
+  config.api_key = FIREBASE_API_KEY;
 
-  // // Assign the maximum retry of token generation
-  // config.max_token_generation_retry = 9;
+  /* Assign the user sign in credentials */
+  auth.user.email = USER_EMAIL;
+  auth.user.password = USER_PASSWORD;
 
-  // Firebase.reconnectWiFi(true);
-  // fbdo.setResponseSize(4096);
-  // fbdo.setBSSLBufferSize(4096 /* Rx buffer size in bytes from 512 - 16384 */, 1024 /* Tx buffer size in bytes from 512 - 16384 */);
+  // Assign the maximum retry of token generation
+  config.max_token_generation_retry = 9;
 
-  // Firebase.begin(&config, &auth);
-  // //----------------------------------------------
-  // // Getting the user UID might take a few seconds
-  // //-----------------------------------------------
-  // Serial.println("Getting User UID");
-  // while ((auth.token.uid) == "") {
-  //   Serial.print('.');
-  //   delay(1000);
-  // }
+  Firebase.reconnectWiFi(true);
+  fbdo.setBSSLBufferSize(4096 /* Rx buffer size in bytes from 512 - 16384 */, 1024 /* Tx buffer size in bytes from 512 - 16384 */);  //4096,1024
+  fbdo.setResponseSize(2048);
 
-  // //-----------------
-  // // Print user UID
-  // //------------------
-  // uid = auth.token.uid.c_str();
-  // Serial.print("User UID: ");
-  // Serial.println(uid);
+  Firebase.begin(&config, &auth);
+  //----------------------------------------------
+  // Getting the user UID might take a few seconds
+  //-----------------------------------------------
+  Serial.println("Getting User UID");
+  while ((auth.token.uid) == "") {
+    Serial.print('.');
+    delay(1000);
+  }
+
+  //-----------------
+  // Print user UID
+  //------------------
+  uid = auth.token.uid.c_str();
+  Serial.print("User UID: ");
+  Serial.println(uid);
+
+  //intialize MonthNow
+  m_GetInitMonth();
+  m_GetInitDay();
 }
 
 enum CommEnum {
@@ -118,6 +138,7 @@ enum CommEnum {
   EnergyNow_Enum,
   EnergyHourly_Enum,
   TotalEnergySincePowerUp_Enum,
+  IsConnected_Enum,
   Message_Ended_Enum
 };
 
@@ -130,10 +151,10 @@ enum CommEnum {
      */
 void ArdCom_Com_Handler() {
   int Hour_TimeNow_VarF = hour();
-  double EnergyHourly_Holder[24][PowerArraySize] = { 0 };
+  double EnergyHourly_Holder[EnergyHourlyArraySize][PowerArraySize] = { 0 };
   String ReceivedDataStringBUFFER = "";
   bool DataReceived = false;
-  for (int i = 0; (i < 5000 &&|| !DataReceived); i++) {
+  for (int i = 0; (i < 5000 && !DataReceived); i++) {
     if (Serial.available() > 0) {
       ReceivedDataStringBUFFER = Serial.readStringUntil('$');
       /*Time Conversation sending time as per request*/
@@ -260,7 +281,14 @@ void ArdCom_Com_Handler() {
 
             break;
           }
-
+        case IsConnected_Enum:
+          {
+            Serial.print("YesConnected");
+            Serial.flush();
+            Serial.print(Terminator_Char);
+            Serial.flush();
+            break;
+          }
         case Message_Ended_Enum:
           {
             if (Serial.available() == 0) {
@@ -280,6 +308,416 @@ void ArdCom_Com_Handler() {
   }
 }
 
+#pragma region UploadingData
+
+// Function to get the document path based on PowerDeviceIter
+String getDocumentPath(int PowerDeviceIter) {
+  switch (PowerDeviceIter) {
+    case 0:
+      return (String) "Devices/" + "PnSJUwXfXIK9rSpS5wOJ" + "/";
+    case 1:
+      return (String) "Devices/" + "WrcFGbEeBnWHsg808zrp" + "/";
+    case 2:
+      return (String) "Devices/" + "jSZw18sdekWlBtibCqcOkkk67Rf2" + "/";
+    case 3:
+      return (String) "Devices/" + "HTkBdiC2CKcJRAe1empV" + "/";
+    default:
+      return "";
+  }
+}
+
+// Function to upload single-value variables
+void uploadDeviceVariables(int PowerDeviceIter, String DocumentPath) {
+  FirebaseJson jsonData;
+
+  // Add TotalEnergySincePowerUp
+  jsonData.set("fields/TotalConsumption/doubleValue", TotalEnergySincePowerUp[PowerDeviceIter]);
+
+  // Add current Power
+  jsonData.set("fields/CurrentPower/doubleValue", power[PowerDeviceIter]);
+
+  // Calculate and add SumEnergyHourly
+  double SumEnergyHourly = 0;
+  for (int i = 0; i < EnergyHourlyArraySize; i++) {
+    SumEnergyHourly += EnergyHourly[i][PowerDeviceIter];
+  }
+  jsonData.set("fields/TotalPowerDay/doubleValue", SumEnergyHourly);
+
+  // Set the update mask
+  String updateMask = "TotalConsumption,CurrentPower,TotalPowerDay";
+
+  // Patch the document
+  Serial.print("Patching variables... ");
+  if (Firebase.Firestore.patchDocument(&fbdo, ProjectId.c_str(), DatabaseId.c_str(), DocumentPath.c_str(), jsonData.raw(), updateMask.c_str())) {
+    Serial.println("Variables patched to Firestore successfully");
+  } else {
+    Serial.print("Firestore patch failed: ");
+    Serial.println(fbdo.errorReason());
+  }
+}
+
+void uploadDeviceVariablesHouse(String DocumentPath) {
+  FirebaseJson jsonData;
+
+  // Calculate Total Energy Consumption for all devices
+  double totalEnergyConsumption = 0;
+  for (int i = 0; i < PowerArraySize; i++) {
+    totalEnergyConsumption += TotalEnergySincePowerUp[i];
+  }
+  jsonData.set("fields/TotalConsumption/doubleValue", totalEnergyConsumption);
+
+  // Calculate Total Current Power for all devices
+  double totalCurrentPower = 0;
+  for (int i = 0; i < PowerArraySize; i++) {
+    totalCurrentPower += power[i];
+  }
+  jsonData.set("fields/CurrentPower/doubleValue", totalCurrentPower);
+
+  // Calculate Total Power for the Day for all devices
+  double totalPowerDay = 0;
+  for (int i = 0; i < EnergyHourlyArraySize; i++) {
+    for (int j = 0; j < PowerArraySize; j++) {
+      totalPowerDay += EnergyHourly[i][j];
+    }
+  }
+  jsonData.set("fields/TotalPowerDay/doubleValue", totalPowerDay);
+
+  // Calculate and add SumEnergyHourly for the house
+  double houseSumEnergyHourly = 0;
+  for (int i = 0; i < EnergyHourlyArraySize; i++) {
+    for (int j = 0; j < PowerArraySize; j++) {
+      houseSumEnergyHourly += EnergyHourly[i][j];
+    }
+  }
+  EnergyMonthly[day()][0] = houseSumEnergyHourly; // Assuming you want to store it in the first element of EnergyMonthly
+
+  // Set the update mask
+  String updateMask = "TotalConsumption,CurrentPower,TotalPowerDay";
+
+  // Patch the document
+  Serial.print("Patching house House variables... ");
+  delay(999);
+  if (Firebase.Firestore.patchDocument(&fbdo, ProjectId.c_str(), DatabaseId.c_str(), DocumentPath.c_str(), jsonData.raw(), updateMask.c_str())) {
+    Serial.println("House variables patched to Firestore successfully");
+  } else {
+    Serial.print("Firestore patch failed: ");
+    Serial.println(fbdo.errorReason());
+  }
+}
+
+// Function to upload the hourly array
+void ArdCom_UploadDataHourlyArray(int PowerDeviceIter, String DocumentPath) {
+  FirebaseJson jsonData;
+  FirebaseJsonArray hourlyArray;
+  FirebaseJson myjson;
+
+  // Add EnergyHourly as an array
+  for (int i = 0; i < EnergyHourlyArraySize; i++) {
+    hourlyArray.add(myjson.set("doubleValue", EnergyHourly[i][PowerDeviceIter]));
+  }
+  jsonData.set("fields/PowerDay/arrayValue/values", hourlyArray);
+
+  // Set the update mask
+  String updateMask = "PowerDay";
+
+  // Patch the document
+  Serial.print("Patch document... ");
+  Serial.println();
+  Serial.println(jsonData.raw());
+  delay(999);
+  if (Firebase.Firestore.patchDocument(&fbdo, ProjectId.c_str(), DatabaseId.c_str(), DocumentPath.c_str(), jsonData.raw(), updateMask.c_str())) {
+    Serial.println("Data patched to Firestore successfully");
+  } else {
+    Serial.print("Firestore patch failed: ");
+    Serial.println(fbdo.errorReason());
+  }
+}
+
+void ArdCom_UploadDataHourlyArrayHouse(String DocumentPath) {
+  FirebaseJson jsonData;
+  FirebaseJsonArray hourlyArray;
+  FirebaseJson myjson;
+
+  // Calculate hourly energy for the house for each hour
+  for (int hour = 0; hour < EnergyHourlyArraySize; hour++) {
+    double hourlyEnergyHouse = 0;
+    for (int device = 0; device < PowerArraySize; device++) {
+      hourlyEnergyHouse += EnergyHourly[hour][device];
+    }
+    hourlyArray.add(myjson.set("integerValue", hourlyEnergyHouse));
+  }
+
+  // Add the hourly array to the JSON data
+  jsonData.set("fields/PowerDay/arrayValue/values", hourlyArray);
+
+  // Set the update mask
+  String updateMask = "PowerDay";
+
+  // Patch the document
+  Serial.print("Patching hourly array for house... ");
+  delay(999);
+  if (Firebase.Firestore.patchDocument(&fbdo, ProjectId.c_str(), DatabaseId.c_str(), DocumentPath.c_str(), jsonData.raw(), updateMask.c_str())) {
+    Serial.println("Hourly array for house patched to Firestore successfully");
+  } else {
+    Serial.print("Firestore patch failed: ");
+    Serial.println(fbdo.errorReason());
+  }
+}
+
+
+int mGetVarIt() {
+  String DocumentPath = "Devices/PrivateVars/";
+  FirebaseJsonData jsonData;  // For storing the retrieved field data
+  FirebaseJson json;          // For parsing and creating JSON
+
+  if (Firebase.Firestore.getDocument(&fbdo, ProjectId.c_str(), DatabaseId.c_str(), DocumentPath.c_str())) {
+    Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+  } else {
+    Serial.println(fbdo.errorReason());
+    return -1;  // Return an error value
+  }
+
+  // Parse the JSON payload
+  json.setJsonData(fbdo.payload());
+
+  // Get m_PrivateIterator, storing the result in jsonData
+  if (json.get(jsonData, "fields/m_PrivateIterator/integerValue")) {
+    // Get the integer value from jsonData
+    int privateIterator = jsonData.intValue;
+
+    // Update the iterator
+    if (privateIterator <= 7) {
+      privateIterator++;
+    } else {
+      privateIterator = 0;
+    }
+
+    // Update the JSON for patching
+    json.set("fields/m_PrivateIterator/integerValue", privateIterator);
+
+    // Set the update mask
+    String updateMask = "m_PrivateIterator";
+
+    // Patch the document
+    if (Firebase.Firestore.patchDocument(&fbdo, ProjectId.c_str(), DatabaseId.c_str(), DocumentPath.c_str(), json.raw(), updateMask.c_str())) {
+      Serial.println("privateIt patched to Firestore successfully");
+    } else {
+      Serial.print("Firestore patch privateIt failed: ");
+      Serial.println(fbdo.errorReason());
+    }
+
+    return privateIterator;  // Return the updated iterator value
+
+  } else {
+    Serial.println("Failed to get m_PrivateIterator field.");
+    return -1;  // Return an error value
+  }
+}
+
+// Main upload function
+void ArdCom_UploadData() {
+  static int UploadIntervaltEnergyMontly = HourNow_Time;
+  String DocumentPath;
+  Serial.end();
+  switch (mGetVarIt()) {
+    case 0:
+      {
+        DocumentPath = getDocumentPath(0);
+        Serial.println("0** ");
+        uploadDeviceVariables(0, DocumentPath);
+        ESP.restart();
+        break;
+      }
+    case 1:
+      {
+        DocumentPath = getDocumentPath(0);
+        Serial.println("1** ");
+        ArdCom_UploadDataHourlyArray(0, DocumentPath);
+        ESP.restart();
+        break;
+      }
+    case 2:
+      {
+        DocumentPath = getDocumentPath(1);
+        Serial.println("2** ");
+        uploadDeviceVariables(1, DocumentPath);
+        ESP.restart();
+        break;
+      }
+    case 3:
+      {
+        DocumentPath = getDocumentPath(1);
+        Serial.println("3** ");
+        ArdCom_UploadDataHourlyArray(1, DocumentPath);
+        ESP.restart();
+        break;
+      }
+    case 4:
+      {
+        DocumentPath = getDocumentPath(2);
+        Serial.println("4** ");
+        uploadDeviceVariables(2, DocumentPath);
+        ESP.restart();
+        break;
+      }
+    case 5:
+      {
+        DocumentPath = getDocumentPath(2);
+        Serial.println("5** ");
+        ArdCom_UploadDataHourlyArray(2, DocumentPath);
+        ESP.restart();
+        break;
+      }
+    case 6:
+      {
+        DocumentPath = getDocumentPath(3);
+        Serial.println("6** ");
+        uploadDeviceVariablesHouse( DocumentPath);
+        ESP.restart();
+        break;
+      }
+          case 7:
+      {
+        DocumentPath = getDocumentPath(3);
+        Serial.println("7** ");
+        ArdCom_UploadDataHourlyArrayHouse( DocumentPath);
+        ESP.restart();
+        break;
+      }
+    case 8:
+      //delay(9000);
+      break;
+    default:
+      //delay(9000);
+      break;
+  }
+}
+#pragma endregion UploadingData
+
+/**
+     * Updates lcd with data
+     *
+     * @param . void.
+     * @return void
+     *
+     */
+void ArdCom_lcd_DataDisp() {
+
+  lcd.begin();      //Defining 16 columns and 2 rows of lcd display
+  lcd.backlight();  //To Power ON the back light
+
+  lcd.print(":1:" + String(EnergyHourly[ArdCom_MyHour()][0]));
+  delay(1000);
+  lcd.clear();
+  lcd.print("2:" + String(EnergyHourly[ArdCom_MyHour()][1]));
+  delay(1000);
+  lcd.clear();
+  lcd.print("3:" + String(EnergyHourly[ArdCom_MyHour()][2]));
+  delay(1000);
+  lcd.clear();
+  lcd.print("4:" + String(TotalEnergySincePowerUp[0]));
+  delay(1000);
+  lcd.clear();
+  lcd.print("5:" + String(TotalEnergySincePowerUp[1]));
+  delay(1000);
+  lcd.clear();
+
+  lcd.print("6:" + String(power[0]));
+  delay(1000);
+  lcd.print("7:" + String(power[1]));
+  delay(1000);
+  lcd.print("8:" + String(power[2]));
+  delay(1000);
+
+  /*testing energyhourly
+  lcd.print(":1:" + String(EnergyHourly[ArdCom_MyHour()][0]));
+  delay(1000);
+  lcd.clear();
+  lcd.print("2:" + String(EnergyHourly[ArdCom_MyHour()][1]));
+  delay(1000);
+  lcd.clear();
+  lcd.print("3:" + String(EnergyHourly[ArdCom_MyHour()][2]));
+  delay(1000);
+  lcd.clear();
+  lcd.print("4:" + String(TotalEnergySincePowerUp[0]));
+  delay(1000);
+  lcd.clear();
+  lcd.print("5:" + String(TotalEnergySincePowerUp[1]));
+  delay(1000);
+  lcd.clear();
+  lcd.print("6:" + String(TotalEnergySincePowerUp[2]));
+  delay(1000);
+  
+  for (int ii = 0; ii < 24; ii++) {
+  lcd.clear();
+  delay(100);
+  lcd.clear();
+    lcd.clear();
+  lcd.print(String(ii)+":1.2:" +String(EnergyHourly[ii][1]));
+  delay(100);
+  lcd.clear();
+    lcd.clear();
+  lcd.print(String(ii)+":1.3:" +String(EnergyHourly[ii][2]));
+  delay(100);
+  lcd.clear();
+  }
+  */
+}
+
+
+/**
+     * Initializes the MonthNow_Time variable
+     *
+     * @param . void.
+     * @return ture if online or false if offline
+     *
+     */
+void m_GetInitMonth() {
+  //Get HourNow make sure it's correct
+  for (int i = 0; (i < 300); i++) {
+    MonthNow_Time = month();
+    delay(500);  // delay to insure hour was recieved correctly
+    if ((MonthNow_Time == month() && MonthNow_Time >= 0 && MonthNow_Time < 24)) {
+      break;
+    }
+  }
+}
+
+/**
+     * Initializes the DayNow_Time variable
+     *
+     * @param . void.
+     * @return ture if online or false if offline
+     *
+     */
+void m_GetInitDay() {
+  //Get HourNow make sure it's correct
+  for (int i = 0; (i < 300); i++) {
+    DayNow_Time = day();
+    delay(500);  // delay to insure hour was recieved correctly
+    if ((DayNow_Time == day() && DayNow_Time >= 0 && DayNow_Time < 24)) {
+      break;
+    }
+  }
+}
+
+/**
+     * Initializes the HourNow_Time variable
+     *
+     * @param . void.
+     * @return ture if online or false if offline
+     *
+     */
+void m_GetInitHour() {
+  //Get HourNow make sure it's correct
+  for (int i = 0; (i < 300); i++) {
+    HourNow_Time = hour();
+    delay(500);  // delay to insure hour was recieved correctly
+    if ((HourNow_Time == hour() && HourNow_Time >= 0 && HourNow_Time < 24)) {
+      break;
+    }
+  }
+}
 /**
      * Checks wifi connection and sends "." in serial if offline
      *

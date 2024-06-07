@@ -53,8 +53,6 @@ float PTthisReading;  //Actual RMS current in Wire for this instant
      *
      */
 void ReadSensors_Init() {
-  lcd.begin();      //Defining 16 columns and 2 rows of lcd display
-  lcd.backlight();  //To Power ON the back light
   voltageSensor.setSensitivity(SENSITIVITY);
   delay(100);
 
@@ -65,9 +63,13 @@ void ReadSensors_Init() {
     pinMode(PTPins[PtLoopI], INPUT);
   }
 
-  lcd.print("Analog Readings");
+  ReadSensors_LcdDisplay("Analog Readings");
   delay(1000);
   lcd.clear();
+
+  //check if we are connected with esp
+  while ((String) "YesConnected" != ReadSensors_SendRequest(IsConnected_Enum))
+    ;
 }
 
 /**
@@ -117,6 +119,9 @@ void ReadSensors_Measure(float* CtArray, float* PtArray, int NumOfCyclesToAverag
      *
      **/
 void ReadSensors_LCDDisplayMeasurements(float* CtArray, float* PtArray, int CtArraySize = 3, int PtArraySize = 1) {
+  lcd.begin();      //Defining 16 columns and 2 rows of lcd display
+  lcd.backlight();  //To Power ON the back light
+
   //lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("PT:");
@@ -174,13 +179,13 @@ bool ReadSensors_SendPowerReadToEsp(CommEnum_t PowerIdentifier, double* power, d
         Serial.print("$");
         Serial.flush();
         //for (int ii = 0; ii < 24; ii++) {
-          for (int i = 0; i < PowerArraySize; i++) {
-            delay(5);
-            Serial.print(String(Energyhourlypowertobe[Hour_TimeNow_VarF][i]));
-            Serial.print("$");
-            Serial.flush();
-          }
-       // }
+        for (int i = 0; i < PowerArraySize; i++) {
+          delay(5);
+          Serial.print(String(Energyhourlypowertobe[Hour_TimeNow_VarF][i]));
+          Serial.print("$");
+          Serial.flush();
+        }
+        // }
         Serial.print(Message_Ended_Enum);
         Serial.print("$");
         Serial.flush();
@@ -229,6 +234,8 @@ String ReadSensors_SendRequest(CommEnum_t Request) {
      *
      **/
 void ReadSensors_LcdDisplay(String toDisp, bool clear = true, int cursorx = 0, int cursory = 0) {
+  lcd.begin();      //Defining 16 columns and 2 rows of lcd display
+  lcd.backlight();  //To Power ON the back light
   if (clear) {
     lcd.clear();
   }
@@ -247,10 +254,114 @@ void ReadSensors_GetInitHour() {
   //Get HourNow make sure it's correct
   for (int i = 0; (i < 300); i++) {
     HourNow_Time = ReadSensors_SendRequest(hour_Enum).toInt();
-    delay(500);
+    delay(500);  // delay to insure hour was recieved correctly
     if ((HourNow_Time == ReadSensors_SendRequest(hour_Enum).toInt() && HourNow_Time >= 0 && HourNow_Time < 24)) {
       break;
     }
+  }
+}
+
+/**
+     * Get Initial Day correctly
+     *
+     * @param null
+     * @return null
+     *
+     **/
+void ReadSensors_GetInitDay() {
+  //Get DayNow make sure it's correct
+  for (int i = 0; (i < 300); i++) {
+    DayNow_Time = ReadSensors_SendRequest(day_Enum).toInt();
+    delay(500);  // delay to insure Day was recieved correctly
+    if ((DayNow_Time == ReadSensors_SendRequest(day_Enum).toInt() && DayNow_Time >= 0 && DayNow_Time < 24)) {
+      break;
+    }
+  }
+}
+
+/**
+     * CalculatePower
+     *
+     * @param null
+     * @return null
+     *
+     **/
+void Main_CalculatePower() {
+  //Power Calculations
+  BeforeMeasure_Time = millis();
+  ReadSensors_Measure(CtArray, PtArray, 10);
+  ReadSensors_LCDDisplayMeasurements(CtArray, PtArray);
+  for (int i = 0; i < PowerArraySize; i++) {
+    power[i] = CtArray[i] * PtArray[0];
+  }
+}
+
+/**
+     * Send Power arrays to Esp
+     *
+     * @param null
+     * @return null
+     *
+     **/
+void Main_SendPower() {
+  /*Send Power*/
+  if ((millis() - Hold_Min_SendPower_VarBefre) >= SendPowerDelayms) {
+    Hold_Min_SendPower_VarBefre = millis();  //update hold variable
+    ReadSensors_SendPowerReadToEsp(Power_Enum, power);
+    ReadSensors_SendPowerReadToEsp(EnergyNow_Enum, EnergyNow);
+    ReadSensors_SendPowerReadToEsp(TotalEnergySincePowerUp_Enum, TotalEnergySincePowerUp);
+    ReadSensors_SendPowerReadToEsp(EnergyHourly_Enum, power, EnergyHourly);
+    delay(2000);
+  }
+}
+
+/**
+     * Calculate Energy arrays 
+     *
+     * @param null
+     * @return null
+     *
+     **/
+void Main_CalculateEnergyArrays() {
+  /*Energy Calculations*/
+
+  //Append Total energy
+  for (int i = 0; i < PowerArraySize; i++) {
+    TotalEnergySincePowerUp[i] += EnergyNow[i];
+  }
+
+  //Append Energy Hourly
+  int HourOld_Time = HourNow_Time;
+  HourNow_Time = ReadSensors_SendRequest(hour_Enum).toInt();
+  if (!(HourNow_Time == HourOld_Time || HourNow_Time % 24 == (HourOld_Time + 1) % 24))  //check correct time
+  {
+    HourNow_Time = HourOld_Time;
+  }
+  for (int i = 0; i < PowerArraySize; i++) {
+    EnergyHourly[HourNow_Time][i] += EnergyNow[i];
+  }
+
+
+  //Calculate Energy
+  Delta_Time = (float)(millis() - BeforeMeasure_Time) / 3600000;  //Convert ms to hour /1000 /60 /60
+  for (int i = 0; i < PowerArraySize; i++) {
+
+    if (Delta_Time <= 0) { break; }  //Edge case covered
+
+    EnergyNow[i] = power[i] * Delta_Time;
+  }
+}
+
+/**
+     * Resets daily arrays after each new day
+     *
+     * @param null
+     * @return null
+     *
+     **/
+void Main_ResetArrays() {
+  if (((signed int)ReadSensors_SendRequest(day_Enum).toInt()) - ((signed int)DayNow_Time) > 0) {
+    EnergyHourly[24][3] = { 0 };
   }
 }
 

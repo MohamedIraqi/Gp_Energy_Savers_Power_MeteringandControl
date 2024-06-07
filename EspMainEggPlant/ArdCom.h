@@ -30,3 +30,24 @@ void ArdCom_Com_Handler();
      *
      */
 bool ArdCom_StatusConnectedWifi();
+
+/**
+     * Uploads Data to firestore
+     *
+     * @param . void.
+     * @return void
+     *
+     */
+void ArdCom_UploadData();
+// String getDocumentPath(int PowerDeviceIter);
+// void ArdCom_UploadDataVariable(int PowerDeviceIter, String DocumentPath);
+// void ArdCom_UploadDataHourlyArray(int PowerDeviceIter, String DocumentPath);
+
+/**
+     * Updates lcd with data
+     *
+     * @param . void.
+     * @return void
+     *
+     */
+void ArdCom_lcd_DataDisp();
