@@ -1,6 +1,7 @@
 /*
 Date:5/5/2024
 Created By Mohamed Iraqi
+@author Mohamed Iraqi - M.A.Iraqi.Amen@gmail.com
 This file defines Core functions for Communication with The arduino Code side of the code
 */
 
@@ -39,9 +40,6 @@ bool ArdCom_StatusConnectedWifi();
      *
      */
 void ArdCom_UploadData();
-// String getDocumentPath(int PowerDeviceIter);
-// void ArdCom_UploadDataVariable(int PowerDeviceIter, String DocumentPath);
-// void ArdCom_UploadDataHourlyArray(int PowerDeviceIter, String DocumentPath);
 
 /**
      * Updates lcd with data

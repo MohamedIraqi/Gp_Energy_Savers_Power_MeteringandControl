@@ -1,6 +1,7 @@
 /*
 Date:26/4/2024
 Created By Mohamed Iraqi
+@author Mohamed Iraqi - M.A.Iraqi.Amen@gmail.com
 This file implements Core functions for Communication with The arduino Code side of the code
 */
 
@@ -19,8 +20,8 @@ This file implements Core functions for Communication with The arduino Code side
 #define lcdAddress 0x27  // You may need to adjust this address based on your LCD module
 
 // Insert your network credentials
-#define WIFI_SSID "HAMBOZZA"
-#define WIFI_PASSWORD "IhavetwoeyesandIcansee@724"
+#define WIFI_SSID "WIFI_SSID"
+#define WIFI_PASSWORD "WIFI_PASSWORD"
 
 // Assign the user sign in credentials
 #define USER_EMAIL "a@a.com"
@@ -37,9 +38,7 @@ static const char ntpServerName[] = "pool.ntp.org";
 const int timeZone = 3;  // Central European Time(+2 and +1 for summer time)
 void sendNTPpacket(IPAddress &address);
 time_t getNtpTime();
-void m_GetInitMonth();
-void m_GetInitDay();
-void m_GetInitHour();
+
 
 WiFiUDP Udp;
 unsigned int localPort = 8888;  // local port to listen for UDP packets
@@ -120,9 +119,6 @@ void ArdCom_Init() {
   Serial.print("User UID: ");
   Serial.println(uid);
 
-  //intialize MonthNow
-  m_GetInitMonth();
-  m_GetInitDay();
 }
 
 enum CommEnum {
@@ -389,7 +385,6 @@ void uploadDeviceVariablesHouse(String DocumentPath) {
       houseSumEnergyHourly += EnergyHourly[i][j];
     }
   }
-  EnergyMonthly[day()][0] = houseSumEnergyHourly; // Assuming you want to store it in the first element of EnergyMonthly
 
   // Set the update mask
   String updateMask = "TotalConsumption,CurrentPower,TotalPowerDay";
@@ -516,7 +511,6 @@ int mGetVarIt() {
 
 // Main upload function
 void ArdCom_UploadData() {
-  static int UploadIntervaltEnergyMontly = HourNow_Time;
   String DocumentPath;
   Serial.end();
   switch (mGetVarIt()) {
@@ -606,133 +600,36 @@ void ArdCom_lcd_DataDisp() {
   lcd.begin();      //Defining 16 columns and 2 rows of lcd display
   lcd.backlight();  //To Power ON the back light
 
-  lcd.print(":1:" + String(EnergyHourly[ArdCom_MyHour()][0]));
+  lcd.print(":KwH room 1:" + String(EnergyHourly[ArdCom_GetHour()][0]));
   delay(1000);
   lcd.clear();
-  lcd.print("2:" + String(EnergyHourly[ArdCom_MyHour()][1]));
+  lcd.print("KwH room 2:" + String(EnergyHourly[ArdCom_GetHour()][1]));
   delay(1000);
   lcd.clear();
-  lcd.print("3:" + String(EnergyHourly[ArdCom_MyHour()][2]));
+  lcd.print("KwH room 3:" + String(EnergyHourly[ArdCom_GetHour()][2]));
   delay(1000);
   lcd.clear();
-  lcd.print("4:" + String(TotalEnergySincePowerUp[0]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("5:" + String(TotalEnergySincePowerUp[1]));
-  delay(1000);
-  lcd.clear();
-
-  lcd.print("6:" + String(power[0]));
-  delay(1000);
-  lcd.print("7:" + String(power[1]));
-  delay(1000);
-  lcd.print("8:" + String(power[2]));
-  delay(1000);
-
-  /*testing energyhourly
-  lcd.print(":1:" + String(EnergyHourly[ArdCom_MyHour()][0]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("2:" + String(EnergyHourly[ArdCom_MyHour()][1]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("3:" + String(EnergyHourly[ArdCom_MyHour()][2]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("4:" + String(TotalEnergySincePowerUp[0]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("5:" + String(TotalEnergySincePowerUp[1]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("6:" + String(TotalEnergySincePowerUp[2]));
-  delay(1000);
   
-  for (int ii = 0; ii < 24; ii++) {
+  lcd.print("Total Room 1:" + String(TotalEnergySincePowerUp[0]));
+  delay(1000);
   lcd.clear();
-  delay(100);
+  lcd.print("Total Room 2:" + String(TotalEnergySincePowerUp[1]));
+  delay(1000);
   lcd.clear();
-    lcd.clear();
-  lcd.print(String(ii)+":1.2:" +String(EnergyHourly[ii][1]));
-  delay(100);
+  lcd.print("Total Room 3:" + String(TotalEnergySincePowerUp[2]));
+  delay(1000);
   lcd.clear();
-    lcd.clear();
-  lcd.print(String(ii)+":1.3:" +String(EnergyHourly[ii][2]));
-  delay(100);
-  lcd.clear();
-  }
-  */
+
+  lcd.print("Power Room 1:" + String(power[0]));
+  delay(1000);
+  lcd.print("Power Room 2:" + String(power[1]));
+  delay(1000);
+  lcd.print("Power Room 3:" + String(power[2]));
+  delay(1000);
+
 }
 
 
-/**
-     * Initializes the MonthNow_Time variable
-     *
-     * @param . void.
-     * @return ture if online or false if offline
-     *
-     */
-void m_GetInitMonth() {
-  //Get HourNow make sure it's correct
-  for (int i = 0; (i < 300); i++) {
-    MonthNow_Time = month();
-    delay(500);  // delay to insure hour was recieved correctly
-    if ((MonthNow_Time == month() && MonthNow_Time >= 0 && MonthNow_Time < 24)) {
-      break;
-    }
-  }
-}
-
-/**
-     * Initializes the DayNow_Time variable
-     *
-     * @param . void.
-     * @return ture if online or false if offline
-     *
-     */
-void m_GetInitDay() {
-  //Get HourNow make sure it's correct
-  for (int i = 0; (i < 300); i++) {
-    DayNow_Time = day();
-    delay(500);  // delay to insure hour was recieved correctly
-    if ((DayNow_Time == day() && DayNow_Time >= 0 && DayNow_Time < 24)) {
-      break;
-    }
-  }
-}
-
-/**
-     * Initializes the HourNow_Time variable
-     *
-     * @param . void.
-     * @return ture if online or false if offline
-     *
-     */
-void m_GetInitHour() {
-  //Get HourNow make sure it's correct
-  for (int i = 0; (i < 300); i++) {
-    HourNow_Time = hour();
-    delay(500);  // delay to insure hour was recieved correctly
-    if ((HourNow_Time == hour() && HourNow_Time >= 0 && HourNow_Time < 24)) {
-      break;
-    }
-  }
-}
-/**
-     * Checks wifi connection and sends "." in serial if offline
-     *
-     * @param . void.
-     * @return ture if online or false if offline
-     *
-     */
-bool ArdCom_StatusConnectedWifi() {
-  bool status = true;
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(300);
-  }
-  return status;
-}
 
 /**
      * Gets current hour
@@ -741,7 +638,7 @@ bool ArdCom_StatusConnectedWifi() {
      * @return returns current hour
      *
      */
-int ArdCom_MyHour() {
+int ArdCom_GetHour() {
   return hour();
 }
 
