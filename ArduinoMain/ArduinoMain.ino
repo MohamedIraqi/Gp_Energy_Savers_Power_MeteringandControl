@@ -10,6 +10,8 @@ This Code Reads from Current and Voltage Sensors --> then displays readings on l
 
 #define PowerArraySize 3
 
+#define EspRstPin 13 //D13
+
 /*Usage Variables*/
 double TotalEnergySincePowerUp[PowerArraySize] = { 0 };
 double EnergyHourly[24][3] = { 0 };
@@ -24,25 +26,48 @@ double power[PowerArraySize] = { 0, 0, 0 };
 int BeforeMeasure_Time = 0;
 float Delta_Time = 0;
 int HourNow_Time = 0;
-int DayNow_Time =0;
+int DayNow_Time = 0;
 
 int SendPowerDelayms = 4999;
 int Hold_Min_SendPower_VarBefre = 3;
 
-void Test_ShowTime();
+int EspRstInt = 0;
+
+
 
 void setup() {
+  pinMode(EspRstPin, INPUT);
+  //digitalWrite(EspRstPin, 0);
+
   Serial.begin(115200);
   ReadSensors_Init();
   ReadSensors_GetInitHour();
   ReadSensors_GetInitDay();
   delay(600);
+
 }
 
 void loop() {
-    //check if we are connected with esp
-  while ((String) "YesConnected" != ReadSensors_SendRequest(IsConnected_Enum))
-    ;
+  //check if we are connected with esp
+  while ((String) "YesConnected" != ReadSensors_SendRequest(IsConnected_Enum)) {
+    if (EspRstInt >= 3) {
+  pinMode(EspRstPin, OUTPUT);
+
+      digitalWrite(EspRstPin, 1);
+      delay(1000);
+  pinMode(EspRstPin, INPUT);
+
+      //digitalWrite(EspRstPin, 0);
+      Serial.println("***********+______________+**********************");
+      delay(3000);
+      EspRstInt=0;
+    }
+      Serial.println(EspRstInt);
+
+    delay(100);
+    EspRstInt++;
+  }
+
   Main_CalculatePower();
 
   Main_SendPower();
@@ -54,14 +79,4 @@ void loop() {
 
   Main_ResetArrays();
   ReadSensors_SendRequest(BreakOut_Enum);
-}
-
-
-void Test_ShowTime() {
-  ReadSensors_LcdDisplay(ReadSensors_SendRequest(hour_Enum));
-  delay(50);
-  ReadSensors_LcdDisplay(":" + ReadSensors_SendRequest(minute_Enum), false);
-  delay(50);
-  ReadSensors_LcdDisplay(":" + ReadSensors_SendRequest(second_Enum), false);
-  delay(1000);
 }

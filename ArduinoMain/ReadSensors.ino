@@ -64,7 +64,7 @@ void ReadSensors_Init() {
     pinMode(PTPins[PtLoopI], INPUT);
   }
 
-  // ReadSensors_LcdDisplay("Analog Readings");
+   ReadSensors_LcdDisplay("Analog Readings");
   // delay(1000);
   // lcd.clear();
 }
@@ -325,7 +325,7 @@ void Main_CalculatePower() {
   //Power Calculations
   BeforeMeasure_Time = millis();
   ReadSensors_Measure(CtArray, PtArray, 10);
-  //ReadSensors_LCDDisplayMeasurements(CtArray, PtArray);
+  ReadSensors_LCDDisplayMeasurements(CtArray, PtArray);
   for (int i = 0; i < PowerArraySize; i++) {
     power[i] = CtArray[i] * PtArray[0];
   }
@@ -346,7 +346,7 @@ void Main_SendPower() {
     ReadSensors_SendPowerReadToEsp(EnergyNow_Enum, EnergyNow);
     ReadSensors_SendPowerReadToEsp(TotalEnergySincePowerUp_Enum, TotalEnergySincePowerUp);
     ReadSensors_SendPowerReadToEsp(EnergyHourly_Enum, power, EnergyHourly);
-    delay(2000);
+    delay(500);
   }
 }
 

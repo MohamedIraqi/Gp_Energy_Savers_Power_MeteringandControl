@@ -32,7 +32,6 @@ int Hold_Millis_SendPower_Var = 0;
 void loop() {
   breakout = false;
   while(!breakout) {
-  //ArdCom_lcd_DataDisp();
   ArdCom_Com_Handler();
   }
 

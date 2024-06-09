@@ -40,12 +40,3 @@ bool ArdCom_StatusConnectedWifi();
      *
      */
 void ArdCom_UploadData();
-
-/**
-     * Updates lcd with data
-     *
-     * @param . void.
-     * @return void
-     *
-     */
-void ArdCom_lcd_DataDisp();

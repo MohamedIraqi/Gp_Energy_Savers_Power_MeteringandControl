@@ -11,13 +11,7 @@ This file implements Core functions for Communication with The arduino Code side
 #include <Firebase_ESP_Client.h>
 #include <addons/TokenHelper.h>
 #include <TimeLib.h>
-#include <LiquidCrystal_I2C.h>
 
-//I2C pins declaration
-// Initialize the LiquidCrystal_I2C library with the LCD address and dimensions
-#define lcdColumns 16
-#define lcdRows 2
-#define lcdAddress 0x27  // You may need to adjust this address based on your LCD module
 
 // Insert your network credentials
 #define WIFI_SSID "no"
@@ -44,8 +38,6 @@ time_t getNtpTime();
 WiFiUDP Udp;
 unsigned int localPort = 8888;  // local port to listen for UDP packets
 
-// Set the LCD address and dimensions
-LiquidCrystal_I2C lcd(lcdAddress, lcdColumns, lcdRows);
 
 // Define Firebase objects
 FirebaseData fbdo;
@@ -166,7 +158,7 @@ void ArdCom_Com_Handler() {
     if (Serial.available() > 0) {
       ReceivedDataStringBUFFER = Serial.readStringUntil('$');
       ReceivedDataStringBUFFER = processSerialString(ReceivedDataStringBUFFER);
-      Serial.println((String)"_________:"+ReceivedDataStringBUFFER);
+      Serial.println();
       /*Time Conversation sending time as per request*/
       switch (ReceivedDataStringBUFFER.toInt()) {
 
@@ -635,46 +627,6 @@ void ArdCom_UploadData() {
 }
 #pragma endregion UploadingData
 
-/**
-     * Updates lcd with data
-     *
-     * @param . void.
-     * @return void
-     *
-     */
-void ArdCom_lcd_DataDisp() {
-
-  lcd.begin(lcdColumns, lcdRows, LCD_5x10DOTS);  //Defining 16 columns and 2 rows of lcd display
-  lcd.backlight();                               //To Power ON the back light
-
-  lcd.print(":KwH room 1:" + String(EnergyHourly[ArdCom_GetHour()][0]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("KwH room 2:" + String(EnergyHourly[ArdCom_GetHour()][1]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("KwH room 3:" + String(EnergyHourly[ArdCom_GetHour()][2]));
-  delay(1000);
-  lcd.clear();
-
-  lcd.print("Total Room 1:" + String(TotalEnergySincePowerUp[0]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("Total Room 2:" + String(TotalEnergySincePowerUp[1]));
-  delay(1000);
-  lcd.clear();
-  lcd.print("Total Room 3:" + String(TotalEnergySincePowerUp[2]));
-  delay(1000);
-  lcd.clear();
-
-  lcd.print("Power Room 1:" + String(power[0]));
-  delay(1000);
-  lcd.print("Power Room 2:" + String(power[1]));
-  delay(1000);
-  lcd.print("Power Room 3:" + String(power[2]));
-  delay(1000);
-}
-
 
 
 /**
@@ -696,8 +648,7 @@ byte packetBuffer[NTP_PACKET_SIZE];  //buffer to hold incoming & outgoing packet
 time_t getNtpTime() {
   IPAddress ntpServerIP;  // NTP server's ip address
 
-  while (Udp.parsePacket() > 0)
-    ;  // discard any previously received packets
+  while (Udp.parsePacket() > 0);  // discard any previously received packets
   Serial.println("Transmit NTP Request");
   // get a random server from the pool
   WiFi.hostByName(ntpServerName, ntpServerIP);
