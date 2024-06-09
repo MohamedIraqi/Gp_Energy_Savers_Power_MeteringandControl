@@ -32,24 +32,28 @@ int Hold_Min_SendPower_VarBefre = 3;
 void Test_ShowTime();
 
 void setup() {
+  Serial.begin(115200);
   ReadSensors_Init();
   ReadSensors_GetInitHour();
   ReadSensors_GetInitDay();
   delay(600);
-  Serial.begin(115200);
 }
 
 void loop() {
+    //check if we are connected with esp
+  while ((String) "YesConnected" != ReadSensors_SendRequest(IsConnected_Enum))
+    ;
   Main_CalculatePower();
 
   Main_SendPower();
 
-  //Show Time (Testing purposes)
-  Test_ShowTime();
+  // //Show Time (Testing purposes)
+  // Test_ShowTime();
 
   Main_CalculateEnergyArrays();
 
   Main_ResetArrays();
+  ReadSensors_SendRequest(BreakOut_Enum);
 }
 
 

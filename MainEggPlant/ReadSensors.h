@@ -17,6 +17,7 @@ typedef enum {
   EnergyNow_Enum,
   EnergyHourly_Enum,
   TotalEnergySincePowerUp_Enum,
+  BreakOut_Enum,
   IsConnected_Enum,
   Message_Ended_Enum
 } CommEnum_t;

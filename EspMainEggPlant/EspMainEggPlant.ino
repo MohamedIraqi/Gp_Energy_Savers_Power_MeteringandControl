@@ -21,6 +21,8 @@ int MonthNow_Time;
 int DayNow_Time;
 int HourNow_Time;
 
+bool breakout;
+
 void setup() {
 
   ArdCom_Init();
@@ -28,20 +30,13 @@ void setup() {
 
 int Hold_Millis_SendPower_Var = 0;
 void loop() {
-  ArdCom_lcd_DataDisp();
+  breakout = false;
+  while(!breakout) {
+  //ArdCom_lcd_DataDisp();
   ArdCom_Com_Handler();
-
-  //test
-  // Populate arrays with random numbers
-  for (size_t i = 0; i < PowerArraySize; ++i) {
-    TotalEnergySincePowerUp[i] = static_cast<double>(std::rand()) / RAND_MAX * 1010;  // Random number between 0 and 1000
-    EnergyNow[i] = static_cast<double>(std::rand()) / RAND_MAX * 1010;                // Random number between 0 and 1000
-    power[i] = static_cast<double>(std::rand()) / RAND_MAX * 1010;
-    for (size_t j = 0; j < 31; ++j) {
-      EnergyHourly[j][i] = static_cast<double>(std::rand()) / RAND_MAX * 1010;  // Random number between 0 and 1000
-    }
-
   }
+
+
 
   ArdCom_UploadData();
 }

@@ -20,8 +20,8 @@ This file implements Core functions for Communication with The arduino Code side
 #define lcdAddress 0x27  // You may need to adjust this address based on your LCD module
 
 // Insert your network credentials
-#define WIFI_SSID "WIFI_SSID"
-#define WIFI_PASSWORD "WIFI_PASSWORD"
+#define WIFI_SSID "no"
+#define WIFI_PASSWORD "noo321Kno@"
 
 // Assign the user sign in credentials
 #define USER_EMAIL "a@a.com"
@@ -32,6 +32,7 @@ This file implements Core functions for Communication with The arduino Code side
 //Define Comm Phrases
 #define Message_Ended "DataReceived"
 #define Terminator_Char "$"
+#define initializor_Char "@"
 
 // NTP Servers:
 static const char ntpServerName[] = "pool.ntp.org";
@@ -44,7 +45,7 @@ WiFiUDP Udp;
 unsigned int localPort = 8888;  // local port to listen for UDP packets
 
 // Set the LCD address and dimensions
-LiquidCrystal_I2C lcd(lcdAddress, lcdColumns, lcdRows, LCD_5x10DOTS);
+LiquidCrystal_I2C lcd(lcdAddress, lcdColumns, lcdRows);
 
 // Define Firebase objects
 FirebaseData fbdo;
@@ -118,7 +119,6 @@ void ArdCom_Init() {
   uid = auth.token.uid.c_str();
   Serial.print("User UID: ");
   Serial.println(uid);
-
 }
 
 enum CommEnum {
@@ -134,9 +134,21 @@ enum CommEnum {
   EnergyNow_Enum,
   EnergyHourly_Enum,
   TotalEnergySincePowerUp_Enum,
+  BreakOut_Enum,
   IsConnected_Enum,
   Message_Ended_Enum
 };
+
+String processSerialString(String receivedString) {
+  int index = receivedString.indexOf(initializor_Char);
+
+  if (index >= 0) { // Initializer is found (at the beginning or later)
+    return receivedString.substring(index + 1); // Return everything AFTER initializer
+  } else { 
+    Serial.println("Error: String does not contain initializer character.");
+    return "";
+  }
+}
 
 /**
      * Manages communication with the arduino
@@ -150,14 +162,18 @@ void ArdCom_Com_Handler() {
   double EnergyHourly_Holder[EnergyHourlyArraySize][PowerArraySize] = { 0 };
   String ReceivedDataStringBUFFER = "";
   bool DataReceived = false;
-  for (int i = 0; (i < 5000 && !DataReceived); i++) {
+  for (int i = 0; (i < 50000 && !DataReceived); i++) {
     if (Serial.available() > 0) {
       ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+      ReceivedDataStringBUFFER = processSerialString(ReceivedDataStringBUFFER);
+      Serial.println((String)"_________:"+ReceivedDataStringBUFFER);
       /*Time Conversation sending time as per request*/
       switch (ReceivedDataStringBUFFER.toInt()) {
 
         case hour_Enum:
           {
+            Serial.print(initializor_Char);
+            Serial.flush();
             Serial.print(hour());
             Serial.flush();
             Serial.print(Terminator_Char);
@@ -166,6 +182,8 @@ void ArdCom_Com_Handler() {
           }
         case minute_Enum:
           {
+            Serial.print(initializor_Char);
+            Serial.flush();
             Serial.print(minute());
             Serial.flush();
             Serial.print(Terminator_Char);
@@ -174,6 +192,8 @@ void ArdCom_Com_Handler() {
           }
         case second_Enum:
           {
+            Serial.print(initializor_Char);
+            Serial.flush();
             Serial.print(second());
             Serial.flush();
             Serial.print(Terminator_Char);
@@ -182,6 +202,8 @@ void ArdCom_Com_Handler() {
           }
         case day_Enum:
           {
+            Serial.print(initializor_Char);
+            Serial.flush();
             Serial.print(day());
             Serial.flush();
             Serial.print(Terminator_Char);
@@ -190,6 +212,8 @@ void ArdCom_Com_Handler() {
           }
         case weekday_Enum:
           {
+            Serial.print(initializor_Char);
+            Serial.flush();
             Serial.print(weekday());
             Serial.flush();
             Serial.print(Terminator_Char);
@@ -198,6 +222,8 @@ void ArdCom_Com_Handler() {
           }
         case month_Enum:
           {
+            Serial.print(initializor_Char);
+            Serial.flush();
             Serial.print(month());
             Serial.flush();
             Serial.print(Terminator_Char);
@@ -206,6 +232,8 @@ void ArdCom_Com_Handler() {
           }
         case year_Enum:
           {
+            Serial.print(initializor_Char);
+            Serial.flush();
             Serial.print(year());
             Serial.flush();
             Serial.print(Terminator_Char);
@@ -214,10 +242,17 @@ void ArdCom_Com_Handler() {
           }
         case now_Enum:
           {
+            Serial.print(initializor_Char);
+            Serial.flush();
             Serial.print(now());
             Serial.flush();
             Serial.print(Terminator_Char);
             Serial.flush();
+            break;
+          }
+        case BreakOut_Enum:
+          {
+            breakout = true;
             break;
           }
         case Power_Enum:
@@ -230,6 +265,7 @@ void ArdCom_Com_Handler() {
                 }
               }
               ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+              ReceivedDataStringBUFFER = processSerialString(ReceivedDataStringBUFFER);
               power[i] = ReceivedDataStringBUFFER.toDouble();
             }
             break;
@@ -245,6 +281,7 @@ void ArdCom_Com_Handler() {
                 }
               }
               ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+              ReceivedDataStringBUFFER = processSerialString(ReceivedDataStringBUFFER);
               EnergyNow[i] = ReceivedDataStringBUFFER.toDouble();
             }
             break;
@@ -259,6 +296,7 @@ void ArdCom_Com_Handler() {
                 }
               }
               ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+              ReceivedDataStringBUFFER = processSerialString(ReceivedDataStringBUFFER);
               TotalEnergySincePowerUp[i] = ReceivedDataStringBUFFER.toDouble();
             }
             break;
@@ -272,6 +310,7 @@ void ArdCom_Com_Handler() {
                 }
               }
               ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+              ReceivedDataStringBUFFER = processSerialString(ReceivedDataStringBUFFER);
               EnergyHourly[Hour_TimeNow_VarF][g] = ReceivedDataStringBUFFER.toDouble();
             }
 
@@ -279,6 +318,8 @@ void ArdCom_Com_Handler() {
           }
         case IsConnected_Enum:
           {
+            Serial.print(initializor_Char);
+            Serial.flush();
             Serial.print("YesConnected");
             Serial.flush();
             Serial.print(Terminator_Char);
@@ -293,10 +334,16 @@ void ArdCom_Com_Handler() {
               }
             };
             ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+            ReceivedDataStringBUFFER = processSerialString(ReceivedDataStringBUFFER);
             if (ReceivedDataStringBUFFER == Message_Ended) {
               DataReceived = true;
               Serial.flush();
             }
+            break;
+          }
+        default:
+          {
+            delay(5);
             break;
           }
       }
@@ -566,15 +613,15 @@ void ArdCom_UploadData() {
       {
         DocumentPath = getDocumentPath(3);
         Serial.println("6** ");
-        uploadDeviceVariablesHouse( DocumentPath);
+        uploadDeviceVariablesHouse(DocumentPath);
         ESP.restart();
         break;
       }
-          case 7:
+    case 7:
       {
         DocumentPath = getDocumentPath(3);
         Serial.println("7** ");
-        ArdCom_UploadDataHourlyArrayHouse( DocumentPath);
+        ArdCom_UploadDataHourlyArrayHouse(DocumentPath);
         ESP.restart();
         break;
       }
@@ -597,8 +644,8 @@ void ArdCom_UploadData() {
      */
 void ArdCom_lcd_DataDisp() {
 
-  lcd.begin();      //Defining 16 columns and 2 rows of lcd display
-  lcd.backlight();  //To Power ON the back light
+  lcd.begin(lcdColumns, lcdRows, LCD_5x10DOTS);  //Defining 16 columns and 2 rows of lcd display
+  lcd.backlight();                               //To Power ON the back light
 
   lcd.print(":KwH room 1:" + String(EnergyHourly[ArdCom_GetHour()][0]));
   delay(1000);
@@ -609,7 +656,7 @@ void ArdCom_lcd_DataDisp() {
   lcd.print("KwH room 3:" + String(EnergyHourly[ArdCom_GetHour()][2]));
   delay(1000);
   lcd.clear();
-  
+
   lcd.print("Total Room 1:" + String(TotalEnergySincePowerUp[0]));
   delay(1000);
   lcd.clear();
@@ -626,7 +673,6 @@ void ArdCom_lcd_DataDisp() {
   delay(1000);
   lcd.print("Power Room 3:" + String(power[2]));
   delay(1000);
-
 }
 
 

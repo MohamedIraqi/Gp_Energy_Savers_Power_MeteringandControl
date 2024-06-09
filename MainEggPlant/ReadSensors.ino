@@ -7,6 +7,7 @@ This file implements Core functions for hardware side of the code
 //Define Comm Phrases
 #define Message_Ended "DataReceived"
 #define Terminator_Char "$"
+#define initializor_Char "@"
 
 
 #include <ZMPT101B.h>
@@ -26,7 +27,7 @@ float getVPP(int sensorTA12);
 #define lcdRows 2
 #define lcdAddress 0x27  // You may need to adjust this address based on your LCD module
 // Set the LCD address and dimensions
-LiquidCrystal_I2C lcd(lcdAddress, lcdColumns, lcdRows, LCD_5x10DOTS);
+LiquidCrystal_I2C lcd(lcdAddress, lcdColumns, lcdRows);
 
 
 // Define analog input pins
@@ -63,13 +64,9 @@ void ReadSensors_Init() {
     pinMode(PTPins[PtLoopI], INPUT);
   }
 
-  ReadSensors_LcdDisplay("Analog Readings");
-  delay(1000);
-  lcd.clear();
-
-  //check if we are connected with esp
-  while ((String) "YesConnected" != ReadSensors_SendRequest(IsConnected_Enum))
-    ;
+  // ReadSensors_LcdDisplay("Analog Readings");
+  // delay(1000);
+  // lcd.clear();
 }
 
 /**
@@ -119,8 +116,8 @@ void ReadSensors_Measure(float* CtArray, float* PtArray, int NumOfCyclesToAverag
      *
      **/
 void ReadSensors_LCDDisplayMeasurements(float* CtArray, float* PtArray, int CtArraySize = 3, int PtArraySize = 1) {
-  lcd.begin();      //Defining 16 columns and 2 rows of lcd display
-  lcd.backlight();  //To Power ON the back light
+  lcd.begin(lcdColumns, lcdRows, LCD_5x10DOTS);  //Defining 16 columns and 2 rows of lcd display
+  lcd.backlight();                               //To Power ON the back light
 
   //lcd.clear();
   lcd.setCursor(0, 0);
@@ -157,46 +154,75 @@ bool ReadSensors_SendPowerReadToEsp(CommEnum_t PowerIdentifier, double* power, d
     case EnergyNow_Enum:
     case TotalEnergySincePowerUp_Enum:
       {
+        Serial.print(initializor_Char);
+        Serial.flush();
         Serial.print(PowerIdentifier);
-        Serial.print("$");
+        Serial.print(Terminator_Char);
         for (int i = 0; i < PowerArraySize; i++) {
           delay(5);
+          Serial.print(initializor_Char);
+          Serial.flush();
           Serial.print(String(power[i]));
-          Serial.print("$");
+          Serial.print(Terminator_Char);
           Serial.flush();
         }
+        Serial.print(initializor_Char);
         Serial.flush();
         Serial.print(Message_Ended_Enum);
-        Serial.print("$");
+        Serial.flush();
+        Serial.print(Terminator_Char);
+
+        Serial.print(initializor_Char);
+        Serial.flush();
         Serial.print(Message_Ended);
-        Serial.print("$");
+        Serial.print(Terminator_Char);
         Serial.flush();
         break;
       }
     case EnergyHourly_Enum:
       {
+        Serial.print(initializor_Char);
+        Serial.flush();
         Serial.print(PowerIdentifier);
-        Serial.print("$");
+        Serial.print(Terminator_Char);
         Serial.flush();
         //for (int ii = 0; ii < 24; ii++) {
         for (int i = 0; i < PowerArraySize; i++) {
           delay(5);
+          Serial.print(initializor_Char);
+          Serial.flush();
           Serial.print(String(Energyhourlypowertobe[Hour_TimeNow_VarF][i]));
-          Serial.print("$");
+          Serial.print(Terminator_Char);
           Serial.flush();
         }
         // }
+        Serial.print(initializor_Char);
+        Serial.flush();
         Serial.print(Message_Ended_Enum);
-        Serial.print("$");
+        Serial.print(Terminator_Char);
+        Serial.flush();
+
+        Serial.print(initializor_Char);
         Serial.flush();
         Serial.print(Message_Ended);
-        Serial.print("$");
+        Serial.print(Terminator_Char);
         Serial.flush();
       }
     default:
       break;
   }
   return Transaction;
+}
+
+String processSerialString(String receivedString) {
+  int index = receivedString.indexOf(initializor_Char);
+
+  if (index >= 0) { // Initializer is found (at the beginning or later)
+    return receivedString.substring(index + 1); // Return everything AFTER initializer
+  } else { 
+    Serial.println("Error: String does not contain initializer character.");
+    return "";
+  }
 }
 
 /**
@@ -208,14 +234,22 @@ bool ReadSensors_SendPowerReadToEsp(CommEnum_t PowerIdentifier, double* power, d
      **/
 String ReadSensors_SendRequest(CommEnum_t Request) {
   String ReceivedDataStringBUFFER = "";
+  Serial.print(initializor_Char);
+  Serial.flush();
   Serial.print(Request);
-  Serial.print("$");
+  Serial.print(Terminator_Char);
+  Serial.flush();
+
+  Serial.print(initializor_Char);
   Serial.flush();
   Serial.print(Message_Ended_Enum);
-  Serial.print("$");
+  Serial.print(Terminator_Char);
+  Serial.flush();
+
+  Serial.print(initializor_Char);
   Serial.flush();
   Serial.print(Message_Ended);
-  Serial.print("$");
+  Serial.print(Terminator_Char);
   Serial.flush();
   if (Serial.available() == 0) {
     for (int i = 0; (i < 100 && (Serial.available() == 0)); i++) {
@@ -223,6 +257,7 @@ String ReadSensors_SendRequest(CommEnum_t Request) {
     }
   };
   ReceivedDataStringBUFFER = Serial.readStringUntil('$');
+  ReceivedDataStringBUFFER = processSerialString(ReceivedDataStringBUFFER);
   return ReceivedDataStringBUFFER;
 }
 
@@ -234,8 +269,8 @@ String ReadSensors_SendRequest(CommEnum_t Request) {
      *
      **/
 void ReadSensors_LcdDisplay(String toDisp, bool clear = true, int cursorx = 0, int cursory = 0) {
-  lcd.begin();      //Defining 16 columns and 2 rows of lcd display
-  lcd.backlight();  //To Power ON the back light
+  lcd.begin(lcdColumns, lcdRows, LCD_5x10DOTS);  //Defining 16 columns and 2 rows of lcd display
+  lcd.backlight();                               //To Power ON the back light
   if (clear) {
     lcd.clear();
   }
@@ -290,7 +325,7 @@ void Main_CalculatePower() {
   //Power Calculations
   BeforeMeasure_Time = millis();
   ReadSensors_Measure(CtArray, PtArray, 10);
-  ReadSensors_LCDDisplayMeasurements(CtArray, PtArray);
+  //ReadSensors_LCDDisplayMeasurements(CtArray, PtArray);
   for (int i = 0; i < PowerArraySize; i++) {
     power[i] = CtArray[i] * PtArray[0];
   }
