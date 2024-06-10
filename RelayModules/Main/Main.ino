@@ -1,83 +1,33 @@
+#include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <Firebase_ESP_Client.h>
-#include <addons/TokenHelper.h> // For token generation 
-#include <SoftwareSerial.h>
+#include <addons/TokenHelper.h>
+#include <ArduinoJson.h>
 
-// Wi-Fi Credentials
-#define WIFI_SSID "no"
-#define WIFI_PASSWORD "noo321Kno@"
+// Insert your network credentials
+#define WIFI_SSID "BARAH SHARED 4"
+#define WIFI_PASSWORD "BARAH16#*44"
 
-// Firebase Credentials (replace with your actual values)
-#define API_KEY "AIzaSyDZlWYdjADT9hdkr-ZJpPW5Ildce_0Y-FU"
+/** Define Firebase credentials and project details **/
+#define FIREBASE_PROJECT_ID "grad-prototype1"
+#define PROJECT_LOCATION "eur3"
+#define FIREBASE_API_KEY "AIzaSyDZlWYdjADT9hdkr-ZJpPW5Ildce_0Y-FU"
+#define DATABASE_URL "https://grad-prototype1-default-rtdb.europe-west1.firebasedatabase.app/"
 #define USER_EMAIL "a@a.com"
 #define USER_PASSWORD "123456"
-#define FIREBASE_PROJECT_ID "grad-prototype1"
 
-// Document Paths
-const String houseDocPath = "/Devices/HTkBdiC2CKcJRAe1empV";
-const String roomDocPaths[] = {
-  "/Devices/PnSJUwXfXIK9rSpS5wOJ", 
-  "/Devices/WrcFGbEeBnWHsg808zrp",
-  "/Devices/jSZw18sdekWlBtibCqcOkkk67Rf2"
-};
-
-// Relay Control Commands (Hex)
-// Relay Module 1 (Rooms 1 and 2)
-const byte openRelay1Cmd[] = {0xA0, 0x01, 0x01, 0xA2}; 
-const byte closeRelay1Cmd[] = {0xA0, 0x01, 0x00, 0xA1};
-const byte openRelay2Cmd[] = {0xA0, 0x02, 0x01, 0xA3};
-const byte closeRelay2Cmd[] = {0xA0, 0x02, 0x00, 0xA2};
-
-// Relay Module 2 (Room 3)
-const byte openRelay3Cmd[] = {0xA0, 0x01, 0x01, 0xA2}; 
-const byte closeRelay3Cmd[] = {0xA0, 0x01, 0x00, 0xA1}; 
-
-// Relay Module Serial Ports (Choose your GPIO pins!)
-#define RELAY_MODULE_1_RX_PIN D2 // GPIO2 (NodeMCU)
-#define RELAY_MODULE_1_TX_PIN D1 // GPIO1 (NodeMCU)
-#define RELAY_MODULE_2_RX_PIN D6 // GPIO12 (NodeMCU)
-#define RELAY_MODULE_2_TX_PIN D7 // GPIO13 (NodeMCU)
-
-// Firebase Objects
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
+String collectionId = "Devices/";
+String DocumentPath1 = "Devices/WrcFGbEeBnWHsg808zrp";
+String DocumentPath2 = "Devices/PnSJUwXfXIK9rSpS5wOJ/";
+String ProjectId = "grad-prototype1";
+String DatabaseId = "(default)";
+bool taskCompleted = false;
+String uid;
 
-// SoftwareSerial for Relay Modules
-SoftwareSerial relayModule1Serial(RELAY_MODULE_1_RX_PIN, RELAY_MODULE_1_TX_PIN);
-SoftwareSerial relayModule2Serial(RELAY_MODULE_2_RX_PIN, RELAY_MODULE_2_TX_PIN);
-
-// Function to get "On_Off" status from Firestore
-bool getOnOffStatus(const String& docPath) {
-  FirebaseJson json;
-  FirebaseJsonData jsonData;
-Serial.print("here Error 7amada");
-  if (Firebase.Firestore.getDocument(&fbdo, FIREBASE_PROJECT_ID, "(default)", docPath.c_str())) {
-    Serial.print(fbdo.payload());
-    json.setJsonData(fbdo.payload());
-    if (json.get(jsonData, "fields/On_Off/booleanValue")) {
-      return jsonData.boolValue;
-    }
-  } else {
-    Serial.printf("Error getting document: %s\n", fbdo.errorReason().c_str());
-  }
-  return false; // Default to off in case of errors
-}
-
-// Function to control a relay (send command over SoftwareSerial)
-void controlRelay(SoftwareSerial& serialPort, const byte* command, bool openRelay) {
-  Serial.print(openRelay ? "Opening relay: " : "Closing relay: ");
-  for (size_t i = 0; i < sizeof(command); i++) {
-    Serial.print(command[i], HEX); Serial.print(" ");
-    serialPort.write(command[i]);
-  }
-  Serial.println();
-}
-
-void setup() {
-  Serial.begin(115200);
-
-  // Connect to Wi-Fi
+void setupFirebase() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to Wi-Fi");
   while (WiFi.status() != WL_CONNECTED) {
@@ -87,43 +37,250 @@ void setup() {
   Serial.println();
   Serial.print("Connected with IP: ");
   Serial.println(WiFi.localIP());
+  Serial.println();
 
-  // Initialize Firebase
-  config.api_key = API_KEY;
+  config.database_url = DATABASE_URL;
+  config.token_status_callback = tokenStatusCallback;
+  config.api_key = FIREBASE_API_KEY;
+
   auth.user.email = USER_EMAIL;
   auth.user.password = USER_PASSWORD;
-  config.token_status_callback = tokenStatusCallback; // See addons/TokenHelper.h
+
+  config.max_token_generation_retry = 9;
+
+  Firebase.reconnectWiFi(true);
+  fbdo.setResponseSize(4096);
+  fbdo.setBSSLBufferSize(4096, 1024);
 
   Firebase.begin(&config, &auth);
-  Firebase.reconnectWiFi(true);
 
-  // Initialize SoftwareSerial for relay modules
-  relayModule1Serial.begin(9600);
-  relayModule2Serial.begin(9600);
+  Serial.println("Firebase setup completed.");
+}
+/*
+void firebaseOperations() {
+  if (Firebase.isTokenExpired()) {
+    Firebase.refreshToken(&config);
+    Serial.println("Refresh token");
+  }
+
+  FirebaseJson content;
+
+  String StringVluesss = "b";
+  content.set("PrivateVars/adel/stringValue", StringVluesss.c_str());
+
+  Serial.print("Create document... ");
+  if (Firebase.Firestore.createDocument(&fbdo, FIREBASE_PROJECT_ID, databaseId.c_str(), DocumentPath1.c_str(), content.raw())) {
+    Serial.printf("createdoc=\n%s\n\n", fbdo.payload().c_str());
+  } else {
+    Serial.println(fbdo.errorReason());
+    Serial.println(content.raw());
+  }
+
+
+  Serial.print("Get a document... ");
+  if (Firebase.Firestore.getDocument(&fbdo, FIREBASE_PROJECT_ID, databaseId.c_str(), DocumentPath1.c_str(), "")) {
+    Serial.printf("GetDoc=\n%s\n\n", fbdo.payload().c_str());
+
+    FirebaseJson payload;
+    payload.setJsonData(fbdo.payload().c_str());
+
+    FirebaseJsonData jsonData;
+    Serial.print("Getting payload... ");
+    Serial.println(payload.get(jsonData, "PrivateVars/integerValue", true));
+    Serial.print("Getstringval ");
+    Serial.println(jsonData.stringValue);
+
+    if (payload.get(jsonData, "PrivateVars/OnOff")) {
+      bool binaryValue = payload.get(jsonData, "PrivateVars/OnOff");
+      
+      if (!binaryValue) {
+        Serial.write(0xA0);
+        Serial.write(0x01);
+        Serial.write(0x01);
+        Serial.write(0xA2);    
+      } else {
+        Serial.write(0xA0);
+        Serial.write(0x01);
+        Serial.write(0x00);
+        Serial.write(0xA1);  
+      }
+    } else {
+      Serial.println("Failed to retrieve binary value from Firestore.");
+    }
+  } else {
+    Serial.print("Get failed. ");
+    Serial.println(fbdo.errorReason());
+  }
+
+  delay(5000);  // Delay between reads
+}
+/*
+void ReadBOOl()
+{
+   String DocumentPath1 = "Devices/PrivateVars/";
+  FirebaseJsonData jsonData;  // For storing the retrieved field data
+  FirebaseJson json;          // For parsing and creating JSON
+
+  if (Firebase.Firestore.getDocument(&fbdo, ProjectId.c_str(), DatabaseId.c_str(), DocumentPath1.c_str())) {
+    Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+  } else {
+    Serial.println(fbdo.errorReason());
+  }
+
+  // Parse the JSON payload
+  json.setJsonData(fbdo.payload());
+
+  // Get OnOffR1, storing the result in jsonData
+  if (json.get(jsonData, "fields/OnOffR1/integerValue")) {
+    // Get the integer value from jsonData
+    int ROOM1 = jsonData.intValue;
+
+    // Set the update mask
+    String updateMask = "OnOffR1";
+
+    // Patch the document
+    if (Firebase.Firestore.patchDocument(&fbdo, ProjectId.c_str(), DatabaseId.c_str(), DocumentPath1.c_str(), json.raw(), updateMask.c_str())) {
+      Serial.println("privateIt patched to Firestore successfully");
+    } else {
+      Serial.print("Firestore patch privateIt failed: ");
+      Serial.println(fbdo.errorReason());
+    }
+
+      if (ROOM1==0) {
+        Serial.write(0xA0);
+        Serial.write(0x01);
+        Serial.write(0x00);
+        Serial.write(0xA1); 
+      } else {
+        Serial.write(0xA0);
+        Serial.write(0x01);
+        Serial.write(0x01);
+        Serial.write(0xA2);     
+      }
+
+
+
+  } else {
+    Serial.println("Failed to get OnOffR1 field.");
+  }
+}*/
+
+void mGetVarIt() {
+  String DocumentPath1 = "Devices/WrcFGbEeBnWHsg808zrp";
+  FirebaseJsonData jsonData;  // For storing the retrieved field data
+  FirebaseJson json;          // For parsing and creating JSON
+
+  if (Firebase.Firestore.getDocument(&fbdo, ProjectId.c_str(), DatabaseId.c_str(), DocumentPath1.c_str())) {
+    Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+  } else {
+    Serial.println(fbdo.errorReason());
+  }
+
+  // Parse the JSON payload
+  json.setJsonData(fbdo.payload());
+
+  // Get On_Off, storing the result in jsonData
+  if (json.get(jsonData, "fields/SwitchONOFF/integerValue")) {
+    // Get the boolean value from jsonData
+    int onOffState = jsonData.intValue;
+
+    // Update the JSON for patching (optional, if you need to update the value)
+    json.set("fields/SwitchONOFF/integerValue", onOffState);
+
+    // Set the update mask (optional, if you are patching)
+    String updateMask = "SwitchONOFF";
+
+    // Patch the document (optional, if you are updating the value)
+    if (Firebase.Firestore.patchDocument(&fbdo, ProjectId.c_str(), DatabaseId.c_str(), DocumentPath1.c_str(), json.raw(), updateMask.c_str())) {
+      Serial.println("On_Off patched to Firestore successfully");
+    } else {
+      Serial.print("Firestore patch SwitchONOFF failed: ");
+      Serial.println(fbdo.errorReason());
+    }
+
+    // Control your device based on the boolean value
+    if (onOffState==0) {
+      Serial.write(0xA0);
+      Serial.write(0x01);
+      Serial.write(0x01);
+      Serial.write(0xA2);
+    } else {
+      Serial.write(0xA0);
+      Serial.write(0x01);
+      Serial.write(0x00);
+      Serial.write(0xA1);
+    }
+  } else {
+    Serial.println("Failed to get SwitchONOFF field.");
+  }
 }
 
-void loop() {
-  // Check for changes in Firestore every 5 seconds (adjust as needed)
-  if (Firebase.ready() && millis() % 5000 == 0) {
+void readR2() {
+  String DocumentPath2 = "Devices/PnSJUwXfXIK9rSpS5wOJ/";
+  FirebaseJsonData jsonData;  // For storing the retrieved field data
+  FirebaseJson json;          // For parsing and creating JSON
 
-    bool houseOnOff = getOnOffStatus(houseDocPath); 
-    Serial.printf("House On_Off: %s\n", houseOnOff ? "true" : "false");
-
-    for (int i = 0; i < 3; i++) {
-      bool roomOnOff = getOnOffStatus(roomDocPaths[i]);
-      Serial.printf("Room %d On_Off: %s\n", i + 1, roomOnOff ? "true" : "false");
-
-      // AND the house and room statuses
-      bool relayState = houseOnOff && roomOnOff; 
-
-      // Control the relays based on the combined state
-      if (i == 0) { // Room 1
-        controlRelay(relayModule1Serial, relayState ? closeRelay1Cmd : openRelay1Cmd, !relayState);
-      } else if (i == 1) { // Room 2
-        controlRelay(relayModule1Serial, relayState ? closeRelay2Cmd : openRelay2Cmd, !relayState);
-      } else if (i == 2) { // Room 3
-        controlRelay(relayModule2Serial, relayState ? closeRelay3Cmd : openRelay3Cmd, !relayState);
-      }
-    }
+  if (Firebase.Firestore.getDocument(&fbdo, ProjectId.c_str(), DatabaseId.c_str(), DocumentPath2.c_str())) {
+    Serial.printf("ok\n%s\n\n", fbdo.payload().c_str());
+  } else {
+    Serial.println(fbdo.errorReason());
   }
+
+  // Parse the JSON payload
+  json.setJsonData(fbdo.payload());
+
+  // Get m_PrivateIterator, storing the result in jsonData
+  if (json.get(jsonData, "fields/SwitchONOFF/integerValue")) {
+    // Get the integer value from jsonData
+    int privateIterator = jsonData.intValue;
+
+
+    // Update the JSON for patching
+    json.set("fields/SwitchONOFF/integerValue", privateIterator);
+
+    // Set the update mask
+    String updateMask = "SwitchONOFF";
+
+    // Patch the document
+    if (Firebase.Firestore.patchDocument(&fbdo, ProjectId.c_str(), DatabaseId.c_str(), DocumentPath2.c_str(), json.raw(), updateMask.c_str())) {
+      Serial.println("SwitchONOFF patched to Firestore successfully");
+    } else {
+      Serial.print("Firestore patch On_Off failed: ");
+      Serial.println(fbdo.errorReason());
+    }
+    if (!(privateIterator == 0)) {
+      Serial.write(0xA0);
+      Serial.write(0x02);
+      Serial.write(0x01);
+      Serial.write(0xA3);
+    } else {
+      Serial.write(0xA0);
+      Serial.write(0x02);
+      Serial.write(0x00);
+      Serial.write(0xA2);
+    }
+
+
+
+
+  } else {
+    Serial.println("Failed to get m_PrivateIterator field.");
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  setupFirebase();
+}
+void loop() {
+  Serial.println("------------------- START OF LOOP -------------------");
+  Serial.print("WiFi status: "); Serial.println(WiFi.status());
+
+  // firebaseOperations();
+  Serial.print("mGetVarIt() start: "); Serial.println(millis());
+  mGetVarIt();
+  Serial.print("mGetVarIt() end: "); Serial.println(millis());
+  Serial.print("Firebase error: "); Serial.println(fbdo.errorReason());
+
+  Serial.println("------------------- END OF LOOP -------------------");
 }
